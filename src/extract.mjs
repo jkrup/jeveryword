@@ -1,7 +1,7 @@
 // Field extraction on top of the core: for each field, ask which token starts the value and which
 // token ends it, then copy that span out of the source. Everything here is about asking well and
 // cheaply; the text-to-id mapping is index() in core.mjs.
-import { index } from './core.mjs';
+import { index, fail } from './core.mjs';
 
 // Shared rules live in state, which is sent once per request; repeating them in
 // every question multiplies their cost by fields x boundaries.
@@ -19,12 +19,16 @@ const LOCATE_RULES = 'sentences lists the source text one sentence per line as s
   'present. Choose ambiguous when several sentences remain equally plausible.';
 
 export async function extractSpans({ text, fields, evaluate, fanout = 253, speculate = true, minSpeculativeProbability = 0.8, locate = true, verify = true, rivalProbability = 0.15, trimPunctuation = true, onRound = () => {}, includeRequests = false }) {
-  if (typeof text !== 'string' || text.length > 20_000) throw new Error('Input must be a string of at most 20,000 characters.');
-  if (!Number.isInteger(fanout) || fanout < 2 || fanout > 253) throw new Error('fanout must be an integer from 2 to 253.');
-  if (!Array.isArray(fields) || !fields.length || fields.length > 16 || new Set(fields.map(f => f.id)).size !== fields.length ||
-      fields.some(f => !/^[a-z][a-z0-9_]*$/i.test(f.id) || typeof f.description !== 'string' || !f.description.trim())) {
-    throw new Error('Supply 1–16 fields with unique simple IDs and nonempty descriptions.');
-  }
+  if (typeof text !== 'string' || text.length > 20_000) throw fail('invalid_input', `text must be a string of at most 20,000 characters (got ${typeof text === 'string' ? `${text.length} characters` : typeof text}).`);
+  if (!Number.isInteger(fanout) || fanout < 2 || fanout > 253) throw fail('invalid_input', `fanout must be an integer from 2 to 253 (got ${fanout}).`);
+  if (typeof evaluate !== 'function') throw fail('invalid_input', 'evaluate must be a function ({ state, questions }) => Promise<{ answers }>.');
+  if (!Array.isArray(fields) || !fields.length || fields.length > 16) throw fail('invalid_input', 'fields must be an array of 1 to 16 { id, description } objects.');
+  fields.forEach((f, i) => {
+    if (typeof f?.id !== 'string' || !/^[a-z][a-z0-9_]*$/i.test(f.id)) throw fail('invalid_input', `fields[${i}].id ${JSON.stringify(f?.id)} must start with a letter and contain only letters, digits and underscores.`);
+    if (fields.findIndex(g => g?.id === f.id) !== i) throw fail('invalid_input', `fields[${i}].id ${JSON.stringify(f.id)} is used more than once.`);
+    if (typeof f.description !== 'string' || !f.description.trim()) throw fail('invalid_input', `fields[${i}] (${f.id}) needs a non-empty description.`);
+  });
+  const invalid = (what, answer, criteria) => fail('invalid_answer', `The model function answered ${JSON.stringify(answer?.choice)} for ${what}, which is not one of the offered options (${Object.keys(criteria).slice(0, 3).join(', ')}, …, ${Object.keys(criteria).slice(-2).join(', ')}). Each answer must look like { choice, probabilities }. No value committed.`);
   const doc = index(text);
   const tokens = doc.chunks;
   const trace = [];
@@ -58,7 +62,7 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
     if (!response) Object.assign(round, { retry: true, recovery: 'Token limit: skipping sentence lookup and searching the whole text.' });
     else searching.forEach((f, i) => {
       const answer = response.answers?.[`q${i}`];
-      if (!answer || !Object.hasOwn(criteria, answer.choice)) throw new Error(`Invalid Jev answer for q${i}; no value committed.`);
+      if (!answer || !Object.hasOwn(criteria, answer.choice)) throw invalid(`the sentence of field "${f.id}"`, answer, criteria);
       round.decisions.push({ field: f.id, boundary: 'locate', range: [0, segments.length - 1], choice: answer.choice, probabilities: answer.probabilities, confidence: answer.confidence });
       f.odds[answer.choice.startsWith('s') ? 'locate' : 'status'] = answer.probabilities?.[answer.choice] ?? 1;
       if (answer.choice.startsWith('s')) f.within = segments[Number(answer.choice.slice(1))];
@@ -135,7 +139,7 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
           else if ((decision.accepted = job.field.start !== null && group.lo >= job.field.start)) { job.field.end = group.lo; job.field.endOdds = answer.probabilities; job.field.odds.end = probability; }
           continue;
         }
-        if (!valid) throw new Error(`Invalid Jev answer for ${key}; no value committed.`);
+        if (!valid) throw invalid(`the ${job.boundary} of field "${job.field.id}"`, answer, questions[key].criteria);
         decisions.push({ field: job.field.id, boundary: job.boundary, range: [job.lo, job.hi], choice: answer.choice, probabilities: answer.probabilities, confidence: answer.confidence });
         // A multi-round search is only as sure as its least sure round.
         const probability = Math.min(job.probability ?? 1, answer.probabilities?.[answer.choice] ?? 1);
@@ -185,5 +189,6 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
     const { value, start, end, lo, hi } = doc.resolve(f.start, f.end, { trim: trimPunctuation });
     return [f.id, { status: 'extracted', value, start, end, tokenStart: lo, tokenEnd: hi, probability }];
   }));
-  return { results, tokenCount: tokens.length, fanout, effectiveFanout, calls, durationMs: Math.round(performance.now() - started), trace };
+  const inputTokens = trace.reduce((sum, round) => sum + (round.usage?.input_tokens ?? 0), 0);
+  return { results, calls, inputTokens, durationMs: Math.round(performance.now() - started), tokenCount: tokens.length, fanout, effectiveFanout, trace };
 }

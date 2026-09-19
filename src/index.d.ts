@@ -19,6 +19,8 @@ export interface Doc {
   decode(choice: unknown): Range | null;
   resolve(lo: number, hi?: number, options?: { trim?: boolean }): Resolved;
   resolve(range: Range, options?: { trim?: boolean }): Resolved;
+  /** decode + resolve: the text a choice points at, or null for a non-id choice such as 'none'. */
+  pick(choice: unknown, options?: { trim?: boolean }): Resolved | null;
   sentences(): Sentence[];
 }
 export function index(text: string, options?: { chunker?: Chunker; prefix?: string }): Doc;
@@ -63,7 +65,9 @@ export interface ExtractOptions {
   onRound?: (round: Round) => unknown;
   includeRequests?: boolean;
 }
-export interface ExtractResult { results: Record<string, FieldResult>; tokenCount: number; fanout: number; effectiveFanout: number; calls: number; durationMs: number; trace: Round[] }
+export interface ExtractResult { results: Record<string, FieldResult>; calls: number; inputTokens: number; durationMs: number; tokenCount: number; fanout: number; effectiveFanout: number; trace: Round[] }
+/** Thrown errors carry `code`: 'invalid_input', 'invalid_answer', and from the bundled client 'max_tokens_exceeded' or 'rate_limited'. */
+export type JeverywordErrorCode = 'invalid_input' | 'invalid_answer' | 'max_tokens_exceeded' | 'rate_limited';
 export function extractSpans(options: ExtractOptions): Promise<ExtractResult>;
 
 export interface Detection { id: number; value: string; start: number; end: number; label: string; score: number; probabilities: Record<string, number> }
@@ -73,7 +77,8 @@ export interface ClassifyOptions {
   labels: Record<string, string>;
   evaluate: Evaluate;
   rules?: string;
-  none?: string;
+  /** Key of the "nothing of interest" label (default 'none', required in labels). Pass false to score by top probability instead. */
+  none?: string | false;
   chunker?: Chunker;
   maxBatch?: number;
   onBatch?: (event: unknown) => unknown;

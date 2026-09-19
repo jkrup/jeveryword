@@ -18,23 +18,24 @@ npm install github:jkrup/jeveryword
 ## The core: ask anything about a text, get text back
 
 ```js
-import { index } from 'jeveryword';
+import { index, createJevClient } from 'jeveryword';
 
+const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY }); // or your own, see below
 const doc = index('Please send the recieved invoices to accounting before Friday.');
 
 doc.state      // { source_text: 'Please send…', tokens: '0|Please\n1|send\n2|the\n3|recieved\n…' }
 doc.options()  // { '0': null, '1': null, '2': null, '3': null, … }  one option per token
 
-// Your question, your model call:
-const { answers } = await jev({
+// Your question:
+const { answers } = await evaluate({
   state: doc.state,
   questions: {
     typo: { type: 'choice', instructions: 'Which token is a misspelled word?', criteria: doc.options({ also: ['none'] }) },
   },
 });
 
-doc.resolve(doc.decode(answers.typo.choice))
-// → { value: 'recieved', start: 16, end: 24, lo: 3, hi: 3 }
+doc.pick(answers.typo.choice)
+// → { value: 'recieved', start: 16, end: 24, lo: 3, hi: 3 }   (null if the model chose 'none')
 ```
 
 That is the whole idea. The library knows nothing about spelling; it only guarantees the
@@ -45,7 +46,7 @@ request, then resolve the pair:
 
 ```js
 const criteria = doc.options({ also: ['none'] });
-const { answers } = await jev({ state: doc.state, questions: {
+const { answers } = await evaluate({ state: doc.state, questions: {
   first: { type: 'choice', criteria, instructions: 'FIRST token of the part where the customer says what they want done?' },
   last:  { type: 'choice', criteria, instructions: 'LAST token of the part where the customer says what they want done?' },
 }});
@@ -54,7 +55,9 @@ if (first && last && first.lo <= last.hi) doc.resolve(first.lo, last.hi, { trim:
 ```
 
 Every answer also carries `probabilities`, one number per option, so you can tell a sure
-pick from a coin toss.
+pick from a coin toss. (Jev adds `confidence` too: its own 0 to 1 summary of how peaked those
+probabilities are.) The option values are `null` because an option needs no description here:
+the numbered list already says what each id is.
 
 | | |
 | --- | --- |
@@ -63,7 +66,8 @@ pick from a coin toss.
 | `doc.state` | `{ source_text, tokens: doc.list() }`, ready to send. Add your own keys freely. |
 | `doc.options({ lo?, hi?, fanout?, also? })` | Answer options: bare ids with `null` descriptions. With more chunks than `fanout` (max 253 per question) they become balanced id ranges such as `40-59`, to narrow over several rounds. `also` adds answers like `'missing'`. |
 | `doc.decode(choice)` | `'12'` → `{ lo: 12, hi: 12 }`, `'40-59'` → `{ lo: 40, hi: 59 }`, anything else → `null`. |
-| `doc.resolve(lo, hi?, { trim? })` | Ids back to `{ value, start, end, lo, hi }`. Also accepts a decoded range. |
+| `doc.resolve(lo, hi?, { trim? })` | Ids back to `{ value, start, end, lo, hi }`. Also accepts a decoded range. `trim` drops trailing sentence punctuation. |
+| `doc.pick(choice, { trim? })` | `decode` + `resolve` in one step; `null` for a non-id choice. |
 | `doc.sentences()` | Sentence ranges, for narrowing long text before pointing at tokens. |
 | `mergeChunks(text, detections, options?)` | Join neighbouring labelled chunks back into text spans. |
 
@@ -133,8 +137,9 @@ const { results, calls } = await extractSpans({
 { status: 'ambiguous', value: null, probability: 0.61 }   // several candidates, or an unclear boundary
 ```
 
-`text.slice(start, end) === value`, always. `probability` is the weakest decision on the
-way to that answer, so sorting by it shows what to double-check:
+`text.slice(start, end) === value`, always. `tokenStart` and `tokenEnd` are the ids of the
+first and last token, as `index(text)` numbers them. `probability` is the weakest decision on
+the way to that answer, so sorting by it shows what to double-check:
 
 ```js
 const shaky = Object.entries(results).filter(([, r]) => r.probability < 0.8);
@@ -143,8 +148,9 @@ const shaky = Object.entries(results).filter(([, r]) => r.probability < 0.8);
 A field's `description` is the whole prompt for that field. Say whose value you mean, which
 one when several appear ("the new number, not the current one"), and what to leave out
 ("without a leading article"). Up to 16 fields per call; ids use letters, digits and
-underscores. The return value also has `calls`, `durationMs`, and a `trace` of every
-question, probability and token count.
+underscores; text up to 20,000 characters (enforced). The return value also has `calls`,
+`inputTokens`, `durationMs`, and a `trace` of every question, probability and token count.
+Empty text returns every field as `missing` without calling the model.
 
 What it does so you do not have to:
 
@@ -160,7 +166,9 @@ What it does so you do not have to:
 - Trailing sentence punctuation is trimmed. Requests that exceed the token limit are
   shrunk and retried; text is never truncated.
 
-Every step can be switched off: `speculate`, `locate`, `verify`, `trimPunctuation`, `fanout`.
+Each step has a switch: `speculate`, `locate`, `verify`, `trimPunctuation` (all default
+`true`). `fanout` (2 to 253, default 253) caps the options per question; lower values trade
+more rounds for smaller requests.
 
 ### Labelling every chunk
 
@@ -182,8 +190,23 @@ uninteresting ones: `label` is the best label other than `none`, and `score` is
 `1 - P(none)`, so "the" might be `{ label: 'name', score: 0.01 }`. `mergeChunks` keeps the
 chunks whose score reaches `threshold` (default 0.5) and joins neighbours that share a
 label. Because the scores are already there, a UI slider can re-run `mergeChunks` at a new
-threshold without asking the model again.
+threshold without asking the model again. `labels` must include the `none` option (rename it
+with `none: 'other'`), since without one every chunk is forced into a real label and the
+scores stop meaning anything. Text up to 20,000 characters (enforced).
 [`examples/pii.mjs`](examples/pii.mjs) is a PII highlighter in about twenty lines of this.
+
+## Errors and types
+
+Thrown errors carry a `code`: `invalid_input` (your arguments; the message names the field or
+option at fault), `invalid_answer` (the model function returned a choice that was not offered;
+the message says which question and what was received, which is what you need when writing
+your own `evaluate`), and from the bundled client `max_tokens_exceeded` and `rate_limited`.
+TypeScript declarations ship with the package.
+
+One caveat on untrusted input. The model can only ever answer with ids, so text cannot make
+it produce words that are not in the source, and every prompt tells it the text is data. Text
+can still influence **which** span it points at. Treat `probability` and your own validation
+as the check, not the prompt.
 
 ## Use it from a coding agent
 
@@ -240,7 +263,7 @@ A call takes a few hundred milliseconds. All fields matched on these samples; th
 anecdote, not an accuracy claim.
 
 Good fit: short text handled live, where you need the exact span, a probability for every
-decision, and output that the input cannot steer. Poor fit: long documents, values that
+decision, and output that can only ever be text from the source. Poor fit: long documents, values that
 must be computed or reformatted ("next Tuesday", "thirty-six"), answers spread across
 sentences, and bulk offline jobs where a small LLM with JSON output costs less.
 

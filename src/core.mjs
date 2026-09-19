@@ -2,6 +2,10 @@
 // the pieces of a text so options can be bare ids, and resolve() turns the ids a model picked
 // back into the exact original substring with character offsets.
 
+// Errors carry a machine-readable code: 'invalid_input' (the caller's arguments) or
+// 'invalid_answer' (the model function returned something that was not offered).
+export function fail(code, message) { return Object.assign(new Error(message), { code }); }
+
 export const chunkers = {
   // Words, numbers and punctuation as separate chunks. Joined names such as JustinKessler are
   // split at the capital; adjacent chunks can still be selected together (McDonald).
@@ -87,6 +91,13 @@ export function index(text, { chunker = chunkers.tokens, prefix = '' } = {}) {
       while (trim && hi > lo && /^[.,;:!?]$/.test(chunks[hi].text)) hi--;
       const start = chunks[lo].start, end = chunks[hi].end;
       return { value: text.slice(start, end), start, end, lo, hi };
+    },
+
+    // decode + resolve in one step: the text a model's choice points at, or null when the choice
+    // was not an id ('none', 'missing', …).
+    pick(choice, options) {
+      const range = doc.decode(choice);
+      return range && doc.resolve(range, options);
     },
 
     // Chunk ranges of sentences, for narrowing long text before pointing at chunks. Conservative:

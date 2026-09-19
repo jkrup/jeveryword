@@ -100,7 +100,7 @@ const spans = mergeChunks(text, scan.detections, { threshold: 0.5 });
 probabilities }`, including uninteresting ones with a score near 0. Do not display it raw:
 `mergeChunks` keeps chunks with `score >= threshold` and joins neighbours with the same label.
 
-Keep a `none` label: each score is then `1 - P(none)`, so a UI slider can re-filter
+A `none` label is required (rename it with the `none` option): each score is then `1 - P(none)`, so a UI slider can re-filter
 `scan.detections` with `mergeChunks` at a new threshold without calling the model again.
 For PII highlighting or redaction, start from this label set (the fuller one is in
 `node_modules/jeveryword/examples/pii.mjs`):
@@ -138,8 +138,7 @@ const { answers } = await evaluate({
     q: { type: 'choice', instructions: 'Which token is a misspelled word?', criteria: doc.options({ also: ['none'] }) },
   },
 });
-const range = doc.decode(answers.q.choice);      // null when the model chose 'none'
-const hit = range && doc.resolve(range);         // { value, start, end }
+const hit = doc.pick(answers.q.choice);          // { value, start, end }, or null when the model chose 'none'
 ```
 
 For a multi-word answer, ask for both ends in the same call and resolve the pair:
@@ -186,6 +185,9 @@ real client.
 ## Before you call it done
 
 - Assert `text.slice(start, end) === value` in a test for at least one real input.
+- Catch errors by `error.code`: `invalid_input` (fix the arguments; the message names the field), `invalid_answer`
+  (the model function returned something not offered), `rate_limited`, `max_tokens_exceeded`. Text over 20,000
+  characters throws `invalid_input`; split it yourself or use a different tool.
 - Show or log low-confidence results instead of trusting them: `probability` on each
   `extractSpans` result, `score` on each `classifyChunks` detection.
 - Cost is roughly $0.0004 for ten fields from a short message and a few hundred

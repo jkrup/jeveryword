@@ -105,7 +105,8 @@ test('empty source skips API and malformed responses fail closed', async () => {
   const fields = [{ id: 'name', description: 'name' }];
   const r = await extractSpans({ text: '', fields, evaluate: () => { throw Error('unexpected'); } });
   assert.equal(r.calls, 0);
-  await assert.rejects(extractSpans({ text: 'name', fields, evaluate: async () => ({ answers: { q0: { choice: '900' } } }) }), /Invalid Jev answer/);
+  await assert.rejects(extractSpans({ text: 'name', fields, evaluate: async () => ({ answers: { q0: { choice: '900' } } }) }), e => e.code === 'invalid_answer' && /"900" for the start of field "name"/.test(e.message));
+  await assert.rejects(extractSpans({ text: 'name', fields: [{ id: 'phone-number', description: 'x' }], evaluate: async () => ({}) }), e => e.code === 'invalid_input' && /fields\[0\]\.id "phone-number"/.test(e.message));
 });
 
 test('token-limit recovery narrows choices and splits batches without losing fields', async () => {

@@ -29,6 +29,8 @@ test('list, options, decode and resolve round-trip: ids out, exact text back', (
   assert.equal(doc.resolve(5, 7, { trim: true }).value, 'software engineer');
   assert.equal(doc.resolve({ lo: 5, hi: 7 }, { trim: true }).value, 'software engineer');
   assert.throws(() => doc.resolve(3, 99), RangeError);
+  assert.equal(doc.pick('1-2').value, 'Maya Chen');
+  assert.equal(doc.pick('missing'), null);
   for (const bad of ['99', '5-2', 'x', '', '1-', null]) assert.equal(doc.decode(bad), null);
 });
 
@@ -62,7 +64,10 @@ test('classifyChunks: compact questions, 1 - P(none) scores, batch halving, fail
   assert.deepEqual(scan.detections.map(d => [d.value, d.label, +d.score.toFixed(2)]), [['Maya', 'name', .9], ['met', 'name', .05], ['Maya', 'name', .9]]);
   for (const d of scan.detections) assert.equal(text.slice(d.start, d.end), d.value);
   assert.deepEqual(mergeChunks(text, scan.detections).map(s => s.value), ['Maya', 'Maya']);
-  await assert.rejects(classifyChunks({ text: 'Maya', labels: { none: '', name: '' }, evaluate: async () => ({ answers: { c0: { choice: 'name' } } }) }), /usable probabilities/);
+  await assert.rejects(classifyChunks({ text: 'Maya', labels: { none: '', name: '' }, evaluate: async () => ({ answers: { c0: { choice: 'name' } } }) }), e => e.code === 'invalid_answer' && /chunk c0 \("Maya"\)/.test(e.message));
+  await assert.rejects(classifyChunks({ text: 'Maya', labels: { name: '', place: '' }, evaluate: async () => ({}) }), e => e.code === 'invalid_input' && /"none" option/.test(e.message));
+  const forced = await classifyChunks({ text: 'Maya', labels: { name: '', place: '' }, none: false, evaluate: async () => ({ answers: { c0: { choice: 'name', probabilities: { name: .7, place: .3 } } } }) });
+  assert.deepEqual([forced.detections[0].label, forced.detections[0].score], ['name', .7]);
 });
 
 test('mergeChunks joins neighbours with the same label and keeps the weakest score', () => {
