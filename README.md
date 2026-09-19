@@ -91,9 +91,9 @@ const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY });
 The bundled client adds 429 handling that honors `Retry-After`, a typed
 `max_tokens_exceeded` error the helpers below use to shrink a request and retry, and an
 optional [Vercel AI Gateway](https://vercel.com/ai-gateway) route that falls back to
-TypeSafe's API: `createJevClient({ gateway: { token }, apiKey })`. 
-For tests, `jeveryword/testing`
-has a stand-in that needs no network or key: tell it the right answers and it plays the model.
+TypeSafe's API: `createJevClient({ gateway: { token }, apiKey })`.
+
+For tests, `jeveryword/testing` has a stand-in that needs no network or key: tell it the right answers and it plays the model.
 
 ```js
 import { stubEvaluate } from 'jeveryword/testing';
