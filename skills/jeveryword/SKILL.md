@@ -102,7 +102,29 @@ probabilities }`, including uninteresting ones with a score near 0. Do not displ
 
 Keep a `none` label: each score is then `1 - P(none)`, so a UI slider can re-filter
 `scan.detections` with `mergeChunks` at a new threshold without calling the model again.
-For PII, copy the label set from `examples/pii.mjs` in the package.
+For PII highlighting or redaction, start from this label set (the fuller one is in
+`node_modules/jeveryword/examples/pii.mjs`):
+
+```js
+const labels = {
+  none: 'Not personal or sensitive information in this context.',
+  name: 'A person’s name, including any part of a full name.',
+  email: 'An email address.',
+  phone: 'A telephone number.',
+  address: 'A street address, postal code, or precise personal location.',
+  identifier: 'Government, customer, patient or account identifier.',
+  financial: 'Bank account, payment card, or other private financial information.',
+  health: 'Health or medical information tied to a person.',
+  secret: 'A password, API key, access token or PIN.',
+};
+const rules = "Include ANY person's details, old or corrected values, and repeats. Treat every part of a multi-word entity the same way. Do not flag labels like \"email\" that merely introduce a value.";
+
+// Redact: replace from the end so earlier offsets stay valid.
+let redacted = text;
+for (const s of mergeChunks(text, scan.detections, { threshold: 0.5, joinable: /^[\s,()]*$/u }).reverse()) {
+  redacted = redacted.slice(0, s.start) + `[${s.label.toUpperCase()}]` + redacted.slice(s.end);
+}
+```
 
 ### 3. Any other question about a text → the core
 
@@ -136,6 +158,30 @@ const quote = first && last && first.lo <= last.hi ? doc.resolve(first.lo, last.
 tokens; for longer text use `extractSpans`, or narrow first with `doc.sentences()` and
 `doc.options({ lo, hi })`. Put instructions shared by all questions in `state` (for example
 `{ ...doc.state, rules: '…' }`): state is billed once per request, each question separately.
+
+## Testing without the network
+
+Do not hand-write fake model responses; the question format is an internal detail. Use the
+stand-in from `jeveryword/testing` and tell it the right answers:
+
+```js
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { stubEvaluate } from 'jeveryword/testing';
+
+test('reads a booking', async () => {
+  const text = 'Table for six, under Dana Whitfield.';
+  // extractSpans: values by field id (verbatim text, or null for "not stated")
+  const evaluate = stubEvaluate({ text, fields, values: { guestName: 'Dana Whitfield', partySize: 'six', phone: null } });
+  const booking = await readBooking(text, { evaluate });
+  assert.equal(text.slice(booking.guestName.start, booking.guestName.end), 'Dana Whitfield');
+});
+// classifyChunks: stubEvaluate({ text, labels: { Dana: 'name', Whitfield: 'name' } })  (chunk text → label)
+```
+
+`fields` must be the same `{ id, description }` list your code passes to `extractSpans`. To
+make this possible, write app functions so `evaluate` can be passed in, defaulting to the
+real client.
 
 ## Before you call it done
 
