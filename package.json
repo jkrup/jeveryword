@@ -1,5 +1,5 @@
 {
-  "name": "jev-span",
+  "name": "jeveryword",
   "version": "0.1.0",
   "description": "Ask a choice-only model (TypeSafe's Jev) questions about text and get exact text back: number the tokens, let the model point, map ids back to the original substring.",
   "type": "module",

@@ -59,7 +59,8 @@ test('classifyChunks: compact questions, 1 - P(none) scores, batch halving, fail
     return { answers: Object.fromEntries(Object.keys(questions).map(k => [k, { choice: k === 'c1' ? 'none' : 'name', probabilities: { none: k === 'c1' ? .95 : .1, name: k === 'c1' ? .05 : .9 } }])), usage: { input_tokens: 10 } };
   } });
   assert.deepEqual([retries, scan.inputTokens, scan.calls], [1, 30, 4]);
-  assert.deepEqual(scan.detections.map(d => [d.label, +d.score.toFixed(2)]), [['name', .9], ['name', .05], ['name', .9]]);
+  assert.deepEqual(scan.detections.map(d => [d.value, d.label, +d.score.toFixed(2)]), [['Maya', 'name', .9], ['met', 'name', .05], ['Maya', 'name', .9]]);
+  for (const d of scan.detections) assert.equal(text.slice(d.start, d.end), d.value);
   assert.deepEqual(mergeChunks(text, scan.detections).map(s => s.value), ['Maya', 'Maya']);
   await assert.rejects(classifyChunks({ text: 'Maya', labels: { none: '', name: '' }, evaluate: async () => ({ answers: { c0: { choice: 'name' } } }) }), /usable probabilities/);
 });

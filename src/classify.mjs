@@ -41,7 +41,8 @@ export async function classifyChunks({ text, labels, evaluate, rules = '', none 
         throw new Error('The model did not return usable probabilities for every chunk. No complete scan is available.');
       }
       const [label, top] = Object.entries(probabilities).filter(([k]) => k !== none).sort((a, b) => b[1] - a[1])[0] ?? [answer.choice, 0];
-      detections.push({ ...c, label, score: typeof probabilities[none] === 'number' ? 1 - probabilities[none] : top, probabilities });
+      // Results say `value` everywhere (resolve, mergeChunks, extractSpans); `text` is for input chunks.
+      detections.push({ id: c.id, value: c.text, start: c.start, end: c.end, label, score: typeof probabilities[none] === 'number' ? 1 - probabilities[none] : top, probabilities });
     }
     inputTokens += response.usage?.input_tokens ?? 0;
     offset += batch.length;

@@ -40,8 +40,8 @@ export type Evaluate = (request: EvaluateRequest) => Promise<EvaluateResponse>;
 
 export interface Field { id: string; description: string }
 export type FieldResult =
-  | { status: 'extracted'; value: string; start: number; end: number; tokenStart: number; tokenEnd: number }
-  | { status: 'missing' | 'ambiguous'; value: null };
+  | { status: 'extracted'; value: string; start: number; end: number; tokenStart: number; tokenEnd: number; probability: number }
+  | { status: 'missing' | 'ambiguous'; value: null; probability: number };
 export interface Decision { field: string; boundary: 'locate' | 'start' | 'end' | 'verify'; range: [number, number]; choice?: string; probabilities?: Record<string, number>; confidence?: number; speculative?: boolean; accepted?: boolean; candidates?: Record<string, string> }
 export interface Round { call: number; boundary: 'locate' | 'start' | 'end' | 'verify'; durationMs: number; decisions: Decision[]; model?: string; provider?: string; usage?: Usage; speculative?: boolean; retry?: boolean; recovery?: string; request?: EvaluateRequest }
 export interface ExtractOptions {
@@ -66,7 +66,7 @@ export interface ExtractOptions {
 export interface ExtractResult { results: Record<string, FieldResult>; tokenCount: number; fanout: number; effectiveFanout: number; calls: number; durationMs: number; trace: Round[] }
 export function extractSpans(options: ExtractOptions): Promise<ExtractResult>;
 
-export interface Detection extends Chunk { label: string; score: number; probabilities: Record<string, number> }
+export interface Detection { id: number; value: string; start: number; end: number; label: string; score: number; probabilities: Record<string, number> }
 export interface ClassifyOptions {
   text: string;
   /** Option name → description. Include a "nothing of interest" option (default key 'none') to get 1 - P(none) scores. */
@@ -79,3 +79,5 @@ export interface ClassifyOptions {
   onBatch?: (event: unknown) => unknown;
 }
 export function classifyChunks(options: ClassifyOptions): Promise<{ detections: Detection[]; calls: number; inputTokens: number; durationMs: number; trace: unknown[] }>;
+
+export { createJevClient, type JevClientOptions } from './client.js';

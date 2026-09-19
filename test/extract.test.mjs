@@ -217,10 +217,12 @@ test('close calls are settled by comparing candidate spans; trailing punctuation
   })) });
   const r = await extractSpans({ text, fields: [{ id: 'role', description: 'role' }], evaluate });
   assert.equal(r.results.role.value, 'software engineer');
+  assert.equal(r.results.role.probability, 0.9, 'the tie-break decided it, so its probability is reported');
   assert.equal(r.calls, 2);
   assert.equal(r.trace.at(-1).boundary, 'verify');
   const plain = await extractSpans({ text, fields: [{ id: 'role', description: 'role' }], evaluate, verify: false, trimPunctuation: false });
   assert.equal(plain.results.role.value, 'engineer.');
+  assert.equal(plain.results.role.probability, 0.59, 'the weaker of the start and end decisions');
 });
 
 test('gateway is tried first; a rate limit or outage falls back to the TypeSafe API for the rest of the run', async t => {

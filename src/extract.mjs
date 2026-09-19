@@ -28,7 +28,7 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
   const doc = index(text);
   const tokens = doc.chunks;
   const trace = [];
-  const states = fields.map(f => ({ ...f, status: tokens.length ? 'searching' : 'missing', start: null, end: null }));
+  const states = fields.map(f => ({ ...f, status: tokens.length ? 'searching' : 'missing', start: null, end: null, odds: {} }));
   const started = performance.now();
   let calls = 0;
   let effectiveFanout = fanout;
@@ -60,6 +60,7 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
       const answer = response.answers?.[`q${i}`];
       if (!answer || !Object.hasOwn(criteria, answer.choice)) throw new Error(`Invalid Jev answer for q${i}; no value committed.`);
       round.decisions.push({ field: f.id, boundary: 'locate', range: [0, segments.length - 1], choice: answer.choice, probabilities: answer.probabilities, confidence: answer.confidence });
+      f.odds[answer.choice.startsWith('s') ? 'locate' : 'status'] = answer.probabilities?.[answer.choice] ?? 1;
       if (answer.choice.startsWith('s')) f.within = segments[Number(answer.choice.slice(1))];
       else f.status = answer.choice;
     });
@@ -131,14 +132,16 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
           decisions.push(decision);
           if (!group || probability < minSpeculativeProbability) decision.accepted = false;
           else if (group.lo !== group.hi) next.push({ ...job, ...group, probability });
-          else if ((decision.accepted = job.field.start !== null && group.lo >= job.field.start)) { job.field.end = group.lo; job.field.endOdds = answer.probabilities; }
+          else if ((decision.accepted = job.field.start !== null && group.lo >= job.field.start)) { job.field.end = group.lo; job.field.endOdds = answer.probabilities; job.field.odds.end = probability; }
           continue;
         }
         if (!valid) throw new Error(`Invalid Jev answer for ${key}; no value committed.`);
         decisions.push({ field: job.field.id, boundary: job.boundary, range: [job.lo, job.hi], choice: answer.choice, probabilities: answer.probabilities, confidence: answer.confidence });
-        if (!group) job.field.status = answer.choice;
-        else if (group.lo === group.hi) { job.field[job.boundary] = group.lo; job.field[`${job.boundary}Odds`] = answer.probabilities; }
-        else next.push({ ...job, ...group });
+        // A multi-round search is only as sure as its least sure round.
+        const probability = Math.min(job.probability ?? 1, answer.probabilities?.[answer.choice] ?? 1);
+        if (!group) { job.field.status = answer.choice; job.field.odds = { status: probability }; }
+        else if (group.lo === group.hi) { job.field[job.boundary] = group.lo; job.field[`${job.boundary}Odds`] = answer.probabilities; job.field.odds[job.boundary] = probability; }
+        else next.push({ ...job, ...group, probability });
       }
       const round = { call: calls, boundary, speculative: guessing, durationMs: Math.round(performance.now() - tick), model: response.model, provider: response.provider, usage: response.usage, decisions };
       if (includeRequests) round.request = { state, questions };
@@ -168,17 +171,19 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
       const answer = response.answers?.[`q${i}`];
       const span = spans[Number(answer?.choice?.slice(1))];
       round.decisions.push({ field: field.id, boundary: 'verify', range: [field.start, field.end], candidates: questions[`q${i}`].criteria, choice: answer?.choice, probabilities: answer?.probabilities, confidence: answer?.confidence });
-      if (span) [field.start, field.end] = span;
+      if (span) { [field.start, field.end] = span; field.odds = { verify: answer.probabilities?.[answer.choice] ?? 1 }; }
     });
     if (includeRequests) round.request = { state: verifyState, questions };
     trace.push(round);
     await onRound(round);
   }
   const results = Object.fromEntries(states.map(f => {
-    if (f.status !== 'searching') return [f.id, { status: f.status, value: null }];
+    // One number per field: the weakest decision on the way to this answer.
+    const probability = Math.min(1, ...Object.values(f.odds));
+    if (f.status !== 'searching') return [f.id, { status: f.status, value: null, probability }];
     // Jev sometimes includes the sentence's closing punctuation; the rules exclude it.
     const { value, start, end, lo, hi } = doc.resolve(f.start, f.end, { trim: trimPunctuation });
-    return [f.id, { status: 'extracted', value, start, end, tokenStart: lo, tokenEnd: hi }];
+    return [f.id, { status: 'extracted', value, start, end, tokenStart: lo, tokenEnd: hi, probability }];
   }));
   return { results, tokenCount: tokens.length, fanout, effectiveFanout, calls, durationMs: Math.round(performance.now() - started), trace };
 }

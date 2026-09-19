@@ -1,4 +1,4 @@
-# jev-span
+# jeveryword
 
 [Jev](https://docs.typesafe.ai) answers multiple-choice questions. It cannot write, so it
 cannot hand you a name, an email, or a quote from a document. It can point, though.
@@ -12,13 +12,13 @@ No dependencies. Works anywhere `fetch` does (Node 20+, Workers, Deno, Bun, brow
 Experimental: checked on a handful of synthetic samples, not benchmarked.
 
 ```sh
-npm install github:jkrup/jev-span
+npm install github:jkrup/jeveryword
 ```
 
 ## The core: ask anything about a text, get text back
 
 ```js
-import { index } from 'jev-span';
+import { index } from 'jeveryword';
 
 const doc = index('Please send the recieved invoices to accounting before Friday.');
 
@@ -39,6 +39,22 @@ doc.resolve(doc.decode(answers.typo.choice))
 
 That is the whole idea. The library knows nothing about spelling; it only guarantees the
 round trip from text to ids and back.
+
+For an answer longer than one token, ask where it starts and where it ends in the same
+request, then resolve the pair:
+
+```js
+const criteria = doc.options({ also: ['none'] });
+const { answers } = await jev({ state: doc.state, questions: {
+  first: { type: 'choice', criteria, instructions: 'FIRST token of the part where the customer says what they want done?' },
+  last:  { type: 'choice', criteria, instructions: 'LAST token of the part where the customer says what they want done?' },
+}});
+const first = doc.decode(answers.first.choice), last = doc.decode(answers.last.choice);
+if (first && last && first.lo <= last.hi) doc.resolve(first.lo, last.hi, { trim: true }); // { value, start, end }
+```
+
+Every answer also carries `probabilities`, one number per option, so you can tell a sure
+pick from a coin toss.
 
 | | |
 | --- | --- |
@@ -68,7 +84,7 @@ const client = new TypeSafeClient();
 const evaluate = request => client.systemOne(request);
 
 // or the small dependency-free client in this package (optional)
-import { createJevClient } from 'jev-span/client';
+import { createJevClient } from 'jeveryword';   // also exported from 'jeveryword/client'
 const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY });
 ```
 
@@ -83,9 +99,10 @@ too, which is how this repo's tests run without a network.
 ### Field extraction
 
 ```js
-import { extractSpans } from 'jev-span';
+import { extractSpans, createJevClient } from 'jeveryword';
+const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY });
 
-const { results } = await extractSpans({
+const { results, calls } = await extractSpans({
   evaluate,
   text: "Alex Smith sent me your way. I'm Maya Chen, a software engineer at Fern Labs. My email is maya.old@example.com, actually use maya.chen@example.com.",
   fields: [
@@ -101,9 +118,26 @@ const { results } = await extractSpans({
 // phone  missing
 ```
 
-Fields are plain-English instructions defined at runtime. Each result is a contiguous
-source span, `missing`, or `ambiguous`. The return value also carries `calls`,
-`durationMs` and a `trace` of every question, probability and usage figure.
+`results` has one entry per field id:
+
+```js
+{ status: 'extracted', value: 'Maya Chen', start: 33, end: 42, probability: 0.99, tokenStart: 8, tokenEnd: 9 }
+{ status: 'missing',   value: null, probability: 0.98 }   // not stated in the text
+{ status: 'ambiguous', value: null, probability: 0.61 }   // several candidates, or an unclear boundary
+```
+
+`text.slice(start, end) === value`, always. `probability` is the weakest decision on the
+way to that answer, so sorting by it shows what to double-check:
+
+```js
+const shaky = Object.entries(results).filter(([, r]) => r.probability < 0.8);
+```
+
+A field's `description` is the whole prompt for that field. Say whose value you mean, which
+one when several appear ("the new number, not the current one"), and what to leave out
+("without a leading article"). Up to 16 fields per call; ids use letters, digits and
+underscores. The return value also has `calls`, `durationMs`, and a `trace` of every
+question, probability and token count.
 
 What it does so you do not have to:
 
@@ -124,7 +158,7 @@ Every step can be switched off: `speculate`, `locate`, `verify`, `trimPunctuatio
 ### Labelling every chunk
 
 ```js
-import { classifyChunks, mergeChunks } from 'jev-span';
+import { classifyChunks, mergeChunks } from 'jeveryword';
 
 const scan = await classifyChunks({
   evaluate, text,
@@ -135,9 +169,43 @@ mergeChunks(text, scan.detections, { threshold: 0.5 });
 // → [{ label: 'name', value: 'Maya Chen', start, end, score }, …]
 ```
 
-One tiny question per chunk, up to 96 per request. With a `none` label each score is
-`1 - P(none)`, so a UI can move a threshold slider without asking again.
+One tiny question per chunk, up to 96 per request. Every chunk comes back in
+`scan.detections` as `{ value, start, end, label, score, probabilities }`, including the
+uninteresting ones: `label` is the best label other than `none`, and `score` is
+`1 - P(none)`, so "the" might be `{ label: 'name', score: 0.01 }`. `mergeChunks` keeps the
+chunks whose score reaches `threshold` (default 0.5) and joins neighbours that share a
+label. Because the scores are already there, a UI slider can re-run `mergeChunks` at a new
+threshold without asking the model again.
 [`examples/pii.mjs`](examples/pii.mjs) is a PII highlighter in about twenty lines of this.
+
+## Use it from a coding agent
+
+For Claude Code, copy [`skills/jeveryword`](skills/jeveryword) into your project's
+`.claude/skills/` (or `~/.claude/skills/`) and ask for what you want ("pull the name and email
+out of each support message"). For any other agent, paste this:
+
+```text
+Add the jeveryword library to this project and use it for the task below.
+jeveryword lets TypeSafe's Jev (a multiple-choice-only model) return exact text: it numbers a
+text's tokens, Jev picks numbers, the library maps them back to the verbatim substring with offsets.
+
+Read https://github.com/jkrup/jeveryword/blob/main/skills/jeveryword/SKILL.md first and follow it.
+Essentials if you cannot open it:
+- npm install github:jkrup/jeveryword   (ESM only; server-side; needs TYPESAFE_API_KEY in the environment, never in browser code)
+- import { createJevClient, extractSpans, classifyChunks, mergeChunks, index } from 'jeveryword'
+- const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY })
+- Named fields: const { results } = await extractSpans({ evaluate, text, fields: [{ id, description }] })
+  each result: { status: 'extracted' | 'missing' | 'ambiguous', value, start, end, probability }
+- A label per word: const { detections } = await classifyChunks({ evaluate, text, labels: { none: '…', myLabel: '…' } })
+  then mergeChunks(text, detections, { threshold: 0.5 }) → [{ label, value, start, end, score }]
+- Anything else: const doc = index(text); send { state: doc.state, questions: { q: { type: 'choice',
+  instructions, criteria: doc.options({ also: ['none'] }) } } } to evaluate; then doc.resolve(doc.decode(answers.q.choice))
+- Values are verbatim spans only. If a value must be computed or reformatted (a date, a total), extract the
+  span and convert it in code. Handle 'missing' and 'ambiguous'; confirm anything with probability under 0.8.
+- Add a test asserting text.slice(start, end) === value.
+
+Task: <describe what you want extracted, labelled or found, and where in the app>
+```
 
 ## Examples
 
