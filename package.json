@@ -1,0 +1,16 @@
+{
+  "name": "jev-span",
+  "version": "0.1.0",
+  "description": "Ask a choice-only model (TypeSafe's Jev) questions about text and get exact text back: number the tokens, let the model point, map ids back to the original substring.",
+  "type": "module",
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.mjs" },
+    "./client": { "types": "./src/client.d.ts", "default": "./src/client.mjs" }
+  },
+  "types": "./src/index.d.ts",
+  "files": ["src"],
+  "scripts": { "test": "node --test" },
+  "keywords": ["jev", "typesafe", "extraction", "pii", "span", "tokens", "structured-data"],
+  "license": "MIT",
+  "engines": { "node": ">=20" }
+}
