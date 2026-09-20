@@ -11,6 +11,15 @@ export function retryDelay(value, retry, now = Date.now()) {
   return 2000 * 2 ** retry;
 }
 
+// On Vercel, AI Gateway accepts the project's own OIDC token, so Jev works with no key at all.
+// Pass the incoming request inside a Vercel Function (the token arrives as a header), or nothing
+// in local dev after `vercel env pull` (it is in VERCEL_OIDC_TOKEN). Returns undefined elsewhere.
+export function vercelGateway(request, env = globalThis.process?.env ?? {}) {
+  if (env.AI_GATEWAY_API_KEY) return { token: env.AI_GATEWAY_API_KEY, authMethod: 'api-key' };
+  const token = (env.VERCEL && request?.headers?.get?.('x-vercel-oidc-token')) || env.VERCEL_OIDC_TOKEN;
+  return token ? { token, authMethod: 'oidc' } : undefined;
+}
+
 const routes = {
   typesafe: ({ apiKey, model }) => ({ provider: 'typesafe', name: 'TypeSafe', endpoint: 'https://api.typesafe.ai/v1/systemone', model,
     headers: { Authorization: `Bearer ${apiKey}` },

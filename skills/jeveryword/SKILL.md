@@ -39,8 +39,12 @@ const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY });
 // or, with TypeSafe's SDK (@typesafe-ai/sdk):  const evaluate = request => client.systemOne(request);
 ```
 
+On Vercel no key is needed: AI Gateway accepts the project's identity token. Inside a Vercel
+Function use `createJevClient({ gateway: vercelGateway(request), apiKey: process.env.TYPESAFE_API_KEY })`
+(the key is then only a fallback and may be unset).
+
 Everything is a named export of `'jeveryword'`: `tokenize`, `extractSpans`, `classifyChunks`,
-`mergeChunks`, `createJevClient`, `chunkers`. It is ESM only (`import`, not `require`).
+`mergeChunks`, `createJevClient`, `vercelGateway`, `chunkers`. It is ESM only (`import`, not `require`).
 
 ## Pick one of three tools
 

@@ -11,4 +11,6 @@ export interface JevClientOptions {
   shouldContinue?: () => boolean;
 }
 export function createJevClient(options: JevClientOptions): Evaluate & { readonly endpoint: string; readonly model: string; readonly provider: 'typesafe' | 'gateway' };
+/** AI Gateway credentials for the current Vercel project (OIDC, no key needed), or undefined off Vercel. */
+export function vercelGateway(request?: Request, env?: Record<string, string | undefined>): { token: string; authMethod: 'api-key' | 'oidc' } | undefined;
 export function retryDelay(value: string | null | undefined, retry: number, now?: number): number;

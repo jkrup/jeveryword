@@ -8,7 +8,7 @@ Get exact text out of [Jev](https://docs.typesafe.ai), TypeSafe's model that onl
 
 [![tests](https://github.com/jkrup/jeveryword/actions/workflows/test.yml/badge.svg)](https://github.com/jkrup/jeveryword/actions/workflows/test.yml) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![node ≥ 20](https://img.shields.io/badge/node-%E2%89%A5%2020-informational) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[**Live demo**](https://jeveryword.vercel.app) · [Quickstart](#quickstart) · [Fields](#pull-fields-out-of-a-message) · [Labels](#label-every-word) · [Any question](#ask-anything-else) · [For coding agents](#use-it-from-a-coding-agent)
+[**Live demo**](https://jeveryword.vercel.app) · [Try it](#try-it) · [Fields](#pull-fields-out-of-a-message) · [Labels](#label-every-word) · [Any question](#ask-anything-else) · [For coding agents](#use-it-from-a-coding-agent)
 
 <br>
 
@@ -32,7 +32,32 @@ turns the numbers Jev picks back into the original substring.
 
 > Experimental. Checked on a handful of synthetic samples, not benchmarked. Try your own text in the [live demo](https://jeveryword.vercel.app).
 
-## Quickstart
+## Try it
+
+**In your terminal, right now.** No install, no API key (it runs on the shared demo):
+
+```sh
+npx github:jkrup/jeveryword "Hi, I'm Maya Chen from Fern Labs. Reach me at maya@fern.example" name company email phone
+```
+
+```
+name     Maya Chen          [8, 17)    98%
+company  Fern Labs          [23, 32)   98%
+email    maya@fern.example  [46, 63)   98%
+phone    — not in the text
+```
+
+Add `--pii` to find personal data instead. Or use the [live demo](https://jeveryword.vercel.app) in a browser.
+
+**With your coding agent.** One command teaches Claude Code, Cursor, Codex and [70+ other agents](https://github.com/vercel-labs/skills) how to use it; then just ask ("pull the name and email out of each support message"):
+
+```sh
+npx skills add jkrup/jeveryword
+```
+
+[![Open in Cursor](https://img.shields.io/badge/Open_in-Cursor-000?logo=cursor&logoColor=white)](https://cursor.com/link/prompt?text=Read%20https%3A//raw.githubusercontent.com/jkrup/jeveryword/main/skills/jeveryword/SKILL.md%20and%20follow%20it.%20Then%20use%20the%20jeveryword%20library%20in%20this%20project%20to%3A%20) or [paste a prompt](#use-it-from-a-coding-agent) into any agent.
+
+**In your code.**
 
 ```sh
 npm install github:jkrup/jeveryword
@@ -236,6 +261,17 @@ const evaluate = stubEvaluate({ text, fields, values: { name: 'Maya Chen', phone
 const evaluate = stubEvaluate({ text, labels: { Maya: 'name', Chen: 'name' } });               // for classifyChunks
 ```
 
+On Vercel you do not need a key at all: AI Gateway accepts your project's own identity token.
+
+```js
+import { createJevClient, vercelGateway } from 'jeveryword';
+
+export async function POST(request) {
+  const evaluate = createJevClient({ gateway: vercelGateway(request), apiKey: process.env.TYPESAFE_API_KEY }); // key optional: fallback only
+  …
+}
+```
+
 The bundled client adds 429 handling that honors `Retry-After`, a typed
 `max_tokens_exceeded` error the helpers use to shrink a request and retry, and an optional
 [Vercel AI Gateway](https://vercel.com/ai-gateway) route that falls back to TypeSafe's API:
@@ -243,17 +279,17 @@ The bundled client adds 429 handling that honors `Retry-After`, a typed
 
 ## Use it from a coding agent
 
-Paste this into Claude Code, Cursor, Codex, or any coding agent, and finish the sentence:
+```sh
+npx skills add jkrup/jeveryword
+```
+
+That installs the [skill](skills/jeveryword/SKILL.md) into whichever agents you use (Claude Code, Cursor, Codex, OpenCode, Cline and more). Then ask for what you want in plain words.
+
+Rather not install anything? Paste this into any agent and finish the sentence:
 
 ```text
 Read https://raw.githubusercontent.com/jkrup/jeveryword/main/skills/jeveryword/SKILL.md and follow it.
 Then use the jeveryword library in this project to:
-```
-
-Using Claude Code a lot? Install it once as a skill, and just ask from then on:
-
-```sh
-mkdir -p ~/.claude/skills/jeveryword && curl -fsSL https://raw.githubusercontent.com/jkrup/jeveryword/main/skills/jeveryword/SKILL.md -o ~/.claude/skills/jeveryword/SKILL.md
 ```
 
 <details>

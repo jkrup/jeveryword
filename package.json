@@ -20,6 +20,7 @@
   "types": "./src/index.d.ts",
   "files": [
     "src",
+    "bin",
     "examples",
     "skills"
   ],
@@ -44,5 +45,8 @@
     "type": "git",
     "url": "git+https://github.com/jkrup/jeveryword.git"
   },
-  "homepage": "https://github.com/jkrup/jeveryword#readme"
+  "homepage": "https://github.com/jkrup/jeveryword#readme",
+  "bin": {
+    "jeveryword": "bin/jeveryword.mjs"
+  }
 }

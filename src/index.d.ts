@@ -85,4 +85,4 @@ export interface ClassifyOptions {
 }
 export function classifyChunks(options: ClassifyOptions): Promise<{ detections: Detection[]; calls: number; inputTokens: number; durationMs: number; trace: unknown[] }>;
 
-export { createJevClient, type JevClientOptions } from './client.js';
+export { createJevClient, vercelGateway, type JevClientOptions } from './client.js';
