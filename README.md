@@ -356,8 +356,7 @@ const { results } = await response.json();   // same result shape as extractSpan
 | `POST /v1/pii` | `{ text, mode?: 'binary' \| 'categorized' }` | 0.004 per 1,000 characters; 0.006 with `mode: 'categorized'` |
 | [`GET /v1`](https://jeveryword.vercel.app/v1) | | free: current network, prices, shapes |
 
-The API currently runs on Base Sepolia with test USDC, and `GET /v1` reports the live network
-and prices. Requests that fail or are malformed are not charged. `npx skills add jkrup/jeveryword`
+Payments are real USDC on Base, and `GET /v1` reports the live network and prices. Requests that fail or are malformed are not charged. `npx skills add jkrup/jeveryword`
 also installs the `jeveryword-api` skill, which documents the API for agents.
 
 ## Cost, speed and limits

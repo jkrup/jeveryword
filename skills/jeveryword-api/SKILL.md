@@ -77,5 +77,5 @@ the returned text in code. Handle `missing` and `ambiguous`; confirm anything un
 - The private key lives in an environment variable on a server or in the agent's own secret
   store. Keep it out of browser code, the repo, and logs.
 - Use a wallet that holds only a small balance for this purpose. Each call costs well under a cent.
-- Check the network in `GET /v1`: `eip155:84532` is Base Sepolia (test USDC, free from a
-  faucet); `eip155:8453` is Base mainnet (real USDC).
+- Payments are real USDC on Base mainnet (`eip155:8453`). `GET /v1` reports the live network; if it ever says
+  `eip155:84532` that is Base Sepolia test money.
