@@ -8,7 +8,7 @@ Get exact text out of [Jev](https://docs.typesafe.ai), TypeSafe's model that onl
 
 [![tests](https://github.com/jkrup/jeveryword/actions/workflows/test.yml/badge.svg)](https://github.com/jkrup/jeveryword/actions/workflows/test.yml) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![node ≥ 20](https://img.shields.io/badge/node-%E2%89%A5%2020-informational) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[**Live demo**](https://jeveryword.vercel.app) · [Try it](#try-it) · [Fields](#pull-fields-out-of-a-message) · [Labels](#label-every-word) · [Any question](#ask-anything-else) · [For coding agents](#use-it-from-a-coding-agent)
+[**Live demo**](https://jeveryword.vercel.app) · [Try it](#try-it) · [Fields](#pull-fields-out-of-a-message) · [Labels](#label-every-word) · [Any question](#ask-anything-else) · [For coding agents](#use-it-from-a-coding-agent) · [Hosted API](#hosted-api-no-key-pay-per-call)
 
 <br>
 
@@ -308,6 +308,40 @@ Task: <describe what you want extracted, labelled or found, and where in the app
 ```
 
 </details>
+
+## Hosted API: no key, pay per call
+
+Rather not get a TypeSafe key? The same extraction and PII scan run as a hosted API that charges
+a fraction of a cent per call in USDC through [x402](https://docs.x402.org). No account, no key;
+built for agents with a wallet.
+
+```js
+import { wrapFetchWithPayment } from '@x402/fetch';            // npm install @x402/fetch @x402/evm viem
+import { x402Client } from '@x402/core/client';
+import { ExactEvmScheme } from '@x402/evm/exact/client';
+import { privateKeyToAccount } from 'viem/accounts';
+
+const client = new x402Client();
+client.register('eip155:*', new ExactEvmScheme(privateKeyToAccount(process.env.EVM_PRIVATE_KEY)));
+const fetchWithPayment = wrapFetchWithPayment(fetch, client);   // pays the 402 and retries
+
+const response = await fetchWithPayment('https://jeveryword.vercel.app/v1/extract', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text, fields: [{ id: 'name', description: "The speaker's full name." }] }),
+});
+const { results } = await response.json();   // same result shape as extractSpans
+```
+
+| Endpoint | Body | Price (USD) |
+| --- | --- | --- |
+| `POST /v1/extract` | `{ text, fields: [{ id, description }] }` | 0.002 + 0.0003 per field; doubled over 1,000 characters |
+| `POST /v1/pii` | `{ text, mode?: 'binary' \| 'categorized' }` | 0.001 per 1,000 characters |
+| [`GET /v1`](https://jeveryword.vercel.app/v1) | | free: current network, prices, shapes |
+
+It is on Base Sepolia (test USDC) for now; `GET /v1` always says which network is live. Failed or
+malformed requests are never charged. Agents: `npx skills add jkrup/jeveryword` also installs the
+`jeveryword-api` skill, which covers all of this.
 
 ## What to expect
 
