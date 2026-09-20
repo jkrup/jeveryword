@@ -37,7 +37,7 @@ const routes = {
 
 // With both credentials the gateway is tried first and TypeSafe's own API is the fallback:
 // a gateway failure (rate limit, quota, outage) moves the rest of this client's calls to TypeSafe.
-export function createJevClient({ apiKey, gateway, model = 'jev-latest', onRetry = () => {}, onFallback = () => {},
+export function createJevClient({ apiKey, gateway, model = 'jev-latest', timeoutMs = 30_000, fallbackTimeoutMs = 4_000, onRetry = () => {}, onFallback = () => {},
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), shouldContinue = () => true } = {}) {
   const chain = [gateway?.token && routes.gateway(gateway), apiKey && routes.typesafe({ apiKey, model })].filter(Boolean);
   if (!chain.length) throw new Error('Set TYPESAFE_API_KEY before running a live extraction.');
@@ -51,7 +51,9 @@ export function createJevClient({ apiKey, gateway, model = 'jev-latest', onRetry
         body: JSON.stringify(route.body(request)),
         // Never follow a redirect with the key attached. Workers lack redirect: 'error'; a 3xx fails as non-OK below.
         redirect: 'manual',
-        signal: AbortSignal.timeout(30_000),
+        // A call normally takes 150 to 500 ms. A route with a fallback behind it gets only a few seconds,
+        // so a hung gateway costs the caller seconds, not half a minute.
+        signal: AbortSignal.timeout(last ? timeoutMs : Math.min(timeoutMs, fallbackTimeoutMs)),
       });
       if (response.status !== 429) break;
       const delayMs = retryDelay(response.headers.get('retry-after'), retries);

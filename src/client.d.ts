@@ -5,6 +5,10 @@ export interface JevClientOptions {
   /** Vercel AI Gateway credentials; tried first when present. */
   gateway?: { token: string; authMethod?: 'api-key' | 'oidc' };
   model?: string;
+  /** Per-request timeout. Default 30,000 ms. */
+  timeoutMs?: number;
+  /** Timeout for a route that has a fallback behind it (the gateway). Default 4,000 ms. */
+  fallbackTimeoutMs?: number;
   onRetry?: (event: { retry: number; delayMs: number; message: string }) => unknown;
   onFallback?: (event: { from: string; to: string; message: string }) => unknown;
   sleep?: (ms: number) => Promise<unknown>;

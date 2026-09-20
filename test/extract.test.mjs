@@ -261,3 +261,17 @@ test('gateway responses are normalized; token-limit errors never trigger a fallb
   await assert.rejects(evaluate({ state: 'Hi', questions: {} }), error => error.code === 'max_tokens_exceeded');
   assert.equal(evaluate.provider, 'gateway');
 });
+
+test('a hung gateway is abandoned after the short fallback timeout, not the full one', async t => {
+  const urls = [];
+  t.mock.method(globalThis, 'fetch', (url, options) => {
+    urls.push(new URL(url).host);
+    if (url.includes('ai-gateway')) return new Promise((_, reject) => options.signal.addEventListener('abort', () => reject(options.signal.reason)));
+    return Promise.resolve(Response.json({ model: 'jev-1', answers: {}, usage: { input_tokens: 1, output_tokens: 0 } }));
+  });
+  const evaluate = createJevClient({ apiKey: 'direct', gateway: { token: 'gw' }, fallbackTimeoutMs: 40, timeoutMs: 5000 });
+  const started = performance.now();
+  assert.equal((await evaluate({ state: 'Hi', questions: {} })).provider, 'typesafe');
+  assert.ok(performance.now() - started < 1000, 'fell back quickly');
+  assert.deepEqual(urls, ['ai-gateway.vercel.sh', 'api.typesafe.ai']);
+});
