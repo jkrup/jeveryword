@@ -1,7 +1,7 @@
 {
   "name": "jeveryword",
   "version": "0.1.0",
-  "description": "Ask a choice-only model (TypeSafe's Jev) questions about text and get exact text back: number the tokens, let the model point, map ids back to the original substring.",
+  "description": "Field extraction, PII detection and exact quotes, built on TypeSafe's Jev. It numbers the words of a text, Jev picks numbers, and you get the exact substring back with offsets and a probability.",
   "type": "module",
   "exports": {
     ".": {
