@@ -243,12 +243,21 @@ The bundled client adds 429 handling that honors `Retry-After`, a typed
 
 ## Use it from a coding agent
 
-For Claude Code, copy [`skills/jeveryword`](skills/jeveryword) into your project's
-`.claude/skills/` (or `~/.claude/skills/`) and ask for what you want: "pull the name and email
-out of each support message".
+Paste this into Claude Code, Cursor, Codex, or any coding agent, and finish the sentence:
+
+```text
+Read https://raw.githubusercontent.com/jkrup/jeveryword/main/skills/jeveryword/SKILL.md and follow it.
+Then use the jeveryword library in this project to:
+```
+
+Using Claude Code a lot? Install it once as a skill, and just ask from then on:
+
+```sh
+mkdir -p ~/.claude/skills/jeveryword && curl -fsSL https://raw.githubusercontent.com/jkrup/jeveryword/main/skills/jeveryword/SKILL.md -o ~/.claude/skills/jeveryword/SKILL.md
+```
 
 <details>
-<summary><b>For any other agent, paste this prompt</b></summary>
+<summary>Agent can't open links? Paste the long version</summary>
 
 <br>
 
