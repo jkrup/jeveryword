@@ -38,5 +38,11 @@
   "license": "MIT",
   "engines": {
     "node": ">=20"
-  }
+  },
+  "author": "Justin Krup",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jkrup/jeveryword.git"
+  },
+  "homepage": "https://github.com/jkrup/jeveryword#readme"
 }
