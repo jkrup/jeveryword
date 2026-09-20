@@ -266,7 +266,10 @@ test('a hung gateway is abandoned after the short fallback timeout, not the full
   const urls = [];
   t.mock.method(globalThis, 'fetch', (url, options) => {
     urls.push(new URL(url).host);
-    if (url.includes('ai-gateway')) return new Promise((_, reject) => options.signal.addEventListener('abort', () => reject(options.signal.reason)));
+    if (url.includes('ai-gateway')) return new Promise((_, reject) => {
+      const keepAlive = setTimeout(() => {}, 5000);   // AbortSignal.timeout does not keep the event loop alive by itself
+      options.signal.addEventListener('abort', () => { clearTimeout(keepAlive); reject(options.signal.reason); });
+    });
     return Promise.resolve(Response.json({ model: 'jev-1', answers: {}, usage: { input_tokens: 1, output_tokens: 0 } }));
   });
   const evaluate = createJevClient({ apiKey: 'direct', gateway: { token: 'gw' }, fallbackTimeoutMs: 40, timeoutMs: 5000 });
