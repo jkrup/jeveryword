@@ -1,4 +1,4 @@
-// The whole idea: a choice-only model cannot return text, but it can point. index() numbers
+// The whole idea: a choice-only model cannot return text, but it can point. tokenize() numbers
 // the pieces of a text so options can be bare ids, and resolve() turns the ids a model picked
 // back into the exact original substring with character offsets.
 
@@ -42,8 +42,8 @@ export function partition(lo, hi, fanout) {
 
 const ABBREVIATION = /^(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|Mt|Inc|Ltd|Co|Corp|vs|etc|[A-Z])$/;
 
-export function index(text, { chunker = chunkers.tokens, prefix = '' } = {}) {
-  if (typeof text !== 'string') throw new TypeError('index(text): text must be a string.');
+export function tokenize(text, { chunker = chunkers.tokens, prefix = '' } = {}) {
+  if (typeof text !== 'string') throw new TypeError('tokenize(text): text must be a string.');
   const chunks = chunker(text).map((chunk, id) => ({ id, ...chunk }));
   const last = chunks.length - 1;
   const doc = {

@@ -1,9 +1,9 @@
 // The core on its own: ask your own question about a text and get exact text back.
 // Here: "which word is misspelled?" Nothing in the library knows about spelling. Run:
 //   TYPESAFE_API_KEY=... node examples/custom-question.mjs
-import { index } from '../src/index.mjs';
+import { tokenize } from '../src/index.mjs';
 
-const doc = index('Please send the recieved invoices to accounting before Friday.');
+const doc = tokenize('Please send the recieved invoices to accounting before Friday.');
 
 // Any function that posts { state, questions } to Jev works; this is the plain HTTP call.
 const response = await fetch('https://api.typesafe.ai/v1/systemone', {

@@ -39,7 +39,7 @@ const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY });
 // or, with TypeSafe's SDK (@typesafe-ai/sdk):  const evaluate = request => client.systemOne(request);
 ```
 
-Everything is a named export of `'jeveryword'`: `index`, `extractSpans`, `classifyChunks`,
+Everything is a named export of `'jeveryword'`: `tokenize`, `extractSpans`, `classifyChunks`,
 `mergeChunks`, `createJevClient`, `chunkers`. It is ESM only (`import`, not `require`).
 
 ## Pick one of three tools
@@ -129,9 +129,9 @@ for (const s of mergeChunks(text, scan.detections, { threshold: 0.5, joinable: /
 ### 3. Any other question about a text → the core
 
 ```js
-import { index } from 'jeveryword';
+import { tokenize } from 'jeveryword';
 
-const doc = index(text);
+const doc = tokenize(text);
 const { answers } = await evaluate({
   state: doc.state,
   questions: {

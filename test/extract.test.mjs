@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { index, partition, extractSpans } from '../src/index.mjs';
+import { tokenize, partition, extractSpans } from '../src/index.mjs';
 import { createJevClient } from '../src/client.mjs';
 
-const tokenize = text => index(text).chunks;
-const sentences = text => index(text).sentences();
+const chunksOf = text => tokenize(text).chunks;
+const sentences = text => tokenize(text).sentences();
 
 function oracle(targets, text) {
   return async ({ questions }) => ({ answers: Object.fromEntries(Object.entries(questions).map(([key, q]) => {
@@ -50,12 +50,12 @@ test('provider token limit errors show actionable guidance without echoing the r
 
 test('tokens preserve Unicode and exact offsets', () => {
   const source = '👋  José van der Berg; a@b.com';
-  for (const t of tokenize(source)) assert.equal(source.slice(t.start, t.end), t.text);
+  for (const t of chunksOf(source)) assert.equal(source.slice(t.start, t.end), t.text);
 });
 
 test('joined capitalized names expose exact boundaries without inserting spaces', async () => {
   const text = '👋 my name is JustinKessler';
-  const tokens = tokenize(text);
+  const tokens = chunksOf(text);
   assert.deepEqual(tokens.slice(-2).map(t => t.text), ['Justin', 'Kessler']);
   for (const t of tokens) assert.equal(text.slice(t.start, t.end), t.text);
   const first = tokens.at(-2).id, last = tokens.at(-1).id;
@@ -68,7 +68,7 @@ test('joined capitalized names expose exact boundaries without inserting spaces'
   assert.equal(result.results.first.value, 'Justin');
   assert.equal(result.results.last.value, 'Kessler');
   assert.equal(result.results.full.value, 'JustinKessler');
-  assert.deepEqual(tokenize('JoséKessler McDonald JUSTIN').map(t => t.text), ['José', 'Kessler', 'Mc', 'Donald', 'JUSTIN']);
+  assert.deepEqual(chunksOf('JoséKessler McDonald JUSTIN').map(t => t.text), ['José', 'Kessler', 'Mc', 'Donald', 'JUSTIN']);
 });
 
 test('partitions cover the full interval with no gaps or overlaps', () => {
@@ -80,7 +80,7 @@ test('partitions cover the full interval with no gaps or overlaps', () => {
 
 test('binary, 8-way and direct preserve crossing spans and internal whitespace', async () => {
   const text = 'Alex referred me; I am José van  der Berg.';
-  const tokens = tokenize(text);
+  const tokens = chunksOf(text);
   const targets = [{ id: 'name', description: 'full name of speaker', start: tokens.find(t => t.text === 'José').id, end: tokens.find(t => t.text === 'Berg').id }];
   for (const fanout of [2, 8, 253]) {
     const r = await extractSpans({ text, fields: targets, fanout, evaluate: oracle(targets) });
@@ -111,7 +111,7 @@ test('empty source skips API and malformed responses fail closed', async () => {
 
 test('token-limit recovery narrows choices and splits batches without losing fields', async () => {
   const text = 'Alex referred me; I am José van der Berg.';
-  const tokens = tokenize(text);
+  const tokens = chunksOf(text);
   const first = tokens.find(t => t.text === 'José').id;
   const last = tokens.find(t => t.text === 'Berg').id;
   const fields = [
@@ -165,7 +165,7 @@ test('questions are compact: shared rules in state, bare id options, balanced fa
 
 test('doubtful speculative ends are discarded and asked again with their start', async () => {
   const text = 'I am José van der Berg.';
-  const tokens = tokenize(text);
+  const tokens = chunksOf(text);
   const fields = [{ id: 'name', description: 'full name', start: tokens.find(t => t.text === 'José').id, end: tokens.find(t => t.text === 'Berg').id }];
   const choose = oracle(fields);
   for (const spoil of [a => ({ ...a, choice: '0', probabilities: { 0: 1 } }), a => ({ ...a, probabilities: { [a.choice]: 0.5 } })]) {
@@ -188,7 +188,7 @@ test('sentences split conservatively and keep emails, decimals and abbreviations
 test('long text: one sentence lookup, then tokens searched only inside the chosen sentences', async () => {
   const filler = 'This sentence is only padding and says nothing useful at all. ';
   const text = filler.repeat(15) + 'My name is José van der Berg. ' + filler.repeat(15);
-  const tokens = tokenize(text);
+  const tokens = chunksOf(text);
   assert.ok(tokens.length > 253);
   const fields = [{ id: 'name', description: 'full name', start: tokens.find(t => t.text === 'José').id, end: tokens.find(t => t.text === 'Berg').id },
     { id: 'phone', description: 'phone number', start: 'missing' }];
@@ -206,7 +206,7 @@ test('long text: one sentence lookup, then tokens searched only inside the chose
 
 test('close calls are settled by comparing candidate spans; trailing punctuation is trimmed', async () => {
   const text = 'I am a software engineer.';
-  const [software, engineer, stop] = ['software', 'engineer', '.'].map(w => tokenize(text).find(t => t.text === w).id);
+  const [software, engineer, stop] = ['software', 'engineer', '.'].map(w => chunksOf(text).find(t => t.text === w).id);
   const evaluate = async ({ questions }) => ({ answers: Object.fromEntries(Object.entries(questions).map(([key, q]) => {
     if (q.instructions.startsWith('Which candidate')) {
       assert.deepEqual(Object.values(q.criteria), ['engineer.', 'software engineer.']);

@@ -23,7 +23,7 @@ export interface Doc {
   pick(choice: unknown, options?: { trim?: boolean }): Resolved | null;
   sentences(): Sentence[];
 }
-export function index(text: string, options?: { chunker?: Chunker; prefix?: string }): Doc;
+export function tokenize(text: string, options?: { chunker?: Chunker; prefix?: string }): Doc;
 export function partition(lo: number, hi: number, fanout: number): Range[];
 export function mergeChunks<K extends string = 'label'>(text: string, detections: ({ start: number; end: number; score: number } & Record<K, string>)[],
   options?: { threshold?: number; key?: K; joinable?: RegExp }): ({ start: number; end: number; score: number; value: string } & Record<K, string>)[];

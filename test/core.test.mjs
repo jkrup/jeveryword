@@ -1,20 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { index, chunkers, mergeChunks, classifyChunks } from '../src/index.mjs';
+import { tokenize, chunkers, mergeChunks, classifyChunks } from '../src/index.mjs';
 import { detectPII } from '../examples/pii.mjs';
 
 test('every chunk maps back to its exact source text, including Unicode', () => {
   for (const chunker of Object.values(chunkers)) {
     const text = '👋  José van der Berg; (a@b.com) “JustinKessler” +1 (415) 555-0123.';
-    const doc = index(text, { chunker });
+    const doc = tokenize(text, { chunker });
     for (const c of doc.chunks) assert.equal(text.slice(c.start, c.end), c.text);
     assert.deepEqual(doc.chunks.map(c => c.id), doc.chunks.map((_, i) => i));
   }
-  assert.deepEqual(index('(a@b.com), call +1 (415) 555-0123!', { chunker: chunkers.words }).chunks.map(c => c.text), ['a@b.com', 'call', '+1', '415', '555-0123']);
+  assert.deepEqual(tokenize('(a@b.com), call +1 (415) 555-0123!', { chunker: chunkers.words }).chunks.map(c => c.text), ['a@b.com', 'call', '+1', '415', '555-0123']);
 });
 
 test('list, options, decode and resolve round-trip: ids out, exact text back', () => {
-  const doc = index("I'm Maya Chen, a software engineer.");
+  const doc = tokenize("I'm Maya Chen, a software engineer.");
   assert.equal(doc.list().split('\n')[1], '1|Maya');
   assert.deepEqual(doc.state, { source_text: doc.text, tokens: doc.list() });
   const options = doc.options({ also: ['missing'] });
@@ -35,7 +35,7 @@ test('list, options, decode and resolve round-trip: ids out, exact text back', (
 });
 
 test('more chunks than fanout become balanced id ranges that narrow to a single chunk', () => {
-  const doc = index(Array.from({ length: 464 }, (_, i) => `w${i}`).join(' '));
+  const doc = tokenize(Array.from({ length: 464 }, (_, i) => `w${i}`).join(' '));
   let range = { lo: 0, hi: 463 }, rounds = 0;
   while (range.lo !== range.hi) {
     const keys = Object.keys(doc.options({ ...range, fanout: 253 }));
@@ -44,7 +44,7 @@ test('more chunks than fanout become balanced id ranges that narrow to a single 
     rounds++;
   }
   assert.deepEqual([rounds, doc.resolve(range).value], [2, 'w300']);
-  const prefixed = index('a b c d', { prefix: 'c' });
+  const prefixed = tokenize('a b c d', { prefix: 'c' });
   assert.deepEqual(Object.keys(prefixed.options({ fanout: 2 })), ['c0-c1', 'c2-c3']);
   assert.deepEqual(prefixed.decode('c2-c3'), { lo: 2, hi: 3 });
   assert.equal(prefixed.decode('2'), null);

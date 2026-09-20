@@ -1,13 +1,13 @@
 // A stand-in for the model, so code built on jeveryword can be tested without a network or a
 // key. You say what the right answers are; it answers the library's questions accordingly.
-import { index, chunkers } from './core.mjs';
+import { tokenize, chunkers } from './core.mjs';
 
 // stubEvaluate({ text, fields, values: { name: 'Maya Chen', phone: null } })   for extractSpans
 // stubEvaluate({ text, labels: { 'Maya': 'name', 'Chen': 'name' } })           for classifyChunks
 // A value must appear verbatim in the text; null or an absent id answers 'missing'. Chunks not
 // listed in `labels` answer `none`. Custom questions get `fallback(question, key)` if you pass one.
 export function stubEvaluate({ text, fields = [], values = {}, labels = {}, none = 'none', fallback } = {}) {
-  const doc = index(text);
+  const doc = tokenize(text);
   const spans = Object.fromEntries(fields.map(f => {
     const value = values[f.id];
     if (value === null || value === undefined) return [f.id, null];

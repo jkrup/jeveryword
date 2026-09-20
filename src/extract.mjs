@@ -1,7 +1,7 @@
 // Field extraction on top of the core: for each field, ask which token starts the value and which
 // token ends it, then copy that span out of the source. Everything here is about asking well and
-// cheaply; the text-to-id mapping is index() in core.mjs.
-import { index, fail } from './core.mjs';
+// cheaply; the text-to-id mapping is tokenize() in core.mjs.
+import { tokenize, fail } from './core.mjs';
 
 // Shared rules live in state, which is sent once per request; repeating them in
 // every question multiplies their cost by fields x boundaries.
@@ -29,7 +29,7 @@ export async function extractSpans({ text, fields, evaluate, fanout = 253, specu
     if (typeof f.description !== 'string' || !f.description.trim()) throw fail('invalid_input', `fields[${i}] (${f.id}) needs a non-empty description.`);
   });
   const invalid = (what, answer, criteria) => fail('invalid_answer', `The model function answered ${JSON.stringify(answer?.choice)} for ${what}, which is not one of the offered options (${Object.keys(criteria).slice(0, 3).join(', ')}, …, ${Object.keys(criteria).slice(-2).join(', ')}). Each answer must look like { choice, probabilities }. No value committed.`);
-  const doc = index(text);
+  const doc = tokenize(text);
   const tokens = doc.chunks;
   const trace = [];
   const states = fields.map(f => ({ ...f, status: tokens.length ? 'searching' : 'missing', start: null, end: null, odds: {} }));

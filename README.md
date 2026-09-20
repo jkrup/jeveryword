@@ -18,10 +18,10 @@ npm install github:jkrup/jeveryword
 ## The core: ask anything about a text, get text back
 
 ```js
-import { index, createJevClient } from 'jeveryword';
+import { tokenize, createJevClient } from 'jeveryword';
 
 const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY }); // or your own, see below
-const doc = index('Please send the recieved invoices to accounting before Friday.');
+const doc = tokenize('Please send the recieved invoices to accounting before Friday.');
 
 doc.state      // { source_text: 'Please send…', tokens: '0|Please\n1|send\n2|the\n3|recieved\n…' }
 doc.options()  // { '0': null, '1': null, '2': null, '3': null, … }  one option per token
@@ -61,7 +61,7 @@ the numbered list already says what each id is.
 
 | | |
 | --- | --- |
-| `index(text, { chunker?, prefix? })` | Split the text into numbered chunks. `chunkers.tokens` (default) separates words, numbers and punctuation; `chunkers.words` keeps emails, phone numbers and ids whole; or pass your own `text => [{ text, start, end }]`. |
+| `tokenize(text, { chunker?, prefix? })` | Split the text into numbered chunks. `chunkers.tokens` (default) separates words, numbers and punctuation; `chunkers.words` keeps emails, phone numbers and ids whole; or pass your own `text => [{ text, start, end }]`. |
 | `doc.list(ranges?)` | The `id\|chunk` lines for the model to read, optionally only some ranges. |
 | `doc.state` | `{ source_text, tokens: doc.list() }`, ready to send. Add your own keys freely. |
 | `doc.options({ lo?, hi?, fanout?, also? })` | Answer options: bare ids with `null` descriptions. With more chunks than `fanout` (max 253 per question) they become balanced id ranges such as `40-59`, to narrow over several rounds. `also` adds answers like `'missing'`. |
@@ -70,6 +70,9 @@ the numbered list already says what each id is.
 | `doc.pick(choice, { trim? })` | `decode` + `resolve` in one step; `null` for a non-id choice. |
 | `doc.sentences()` | Sentence ranges, for narrowing long text before pointing at tokens. |
 | `mergeChunks(text, detections, options?)` | Join neighbouring labelled chunks back into text spans. |
+
+"Token" here means a word, number or punctuation mark of your text, not the sub-word tokens
+a language model counts and bills.
 
 Two details in here were learned the hard way. Bare ids with `null` descriptions cost far
 fewer tokens than describing every option, because the numbered list already says what
@@ -138,7 +141,7 @@ const { results, calls } = await extractSpans({
 ```
 
 `text.slice(start, end) === value`, always. `tokenStart` and `tokenEnd` are the ids of the
-first and last token, as `index(text)` numbers them. `probability` is the weakest decision on
+first and last token, as `tokenize(text)` numbers them. `probability` is the weakest decision on
 the way to that answer, so sorting by it shows what to double-check:
 
 ```js
@@ -222,13 +225,13 @@ text's tokens, Jev picks numbers, the library maps them back to the verbatim sub
 Read https://github.com/jkrup/jeveryword/blob/main/skills/jeveryword/SKILL.md first and follow it.
 Essentials if you cannot open it:
 - npm install github:jkrup/jeveryword   (ESM only; server-side; needs TYPESAFE_API_KEY in the environment, never in browser code)
-- import { createJevClient, extractSpans, classifyChunks, mergeChunks, index } from 'jeveryword'
+- import { createJevClient, extractSpans, classifyChunks, mergeChunks, tokenize } from 'jeveryword'
 - const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY })
 - Named fields: const { results } = await extractSpans({ evaluate, text, fields: [{ id, description }] })
   each result: { status: 'extracted' | 'missing' | 'ambiguous', value, start, end, probability }
 - A label per word: const { detections } = await classifyChunks({ evaluate, text, labels: { none: '…', myLabel: '…' } })
   then mergeChunks(text, detections, { threshold: 0.5 }) → [{ label, value, start, end, score }]
-- Anything else: const doc = index(text); send { state: doc.state, questions: { q: { type: 'choice',
+- Anything else: const doc = tokenize(text); send { state: doc.state, questions: { q: { type: 'choice',
   instructions, criteria: doc.options({ also: ['none'] }) } } } to evaluate; then doc.resolve(doc.decode(answers.q.choice))
 - Values are verbatim spans only. If a value must be computed or reformatted (a date, a total), extract the
   span and convert it in code. Handle 'missing' and 'ambiguous'; confirm anything with probability under 0.8.
