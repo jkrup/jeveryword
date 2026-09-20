@@ -1,6 +1,6 @@
 {
   "name": "jeveryword",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Field extraction, PII detection and exact quotes, built on TypeSafe's Jev. It numbers the words of a text, Jev picks numbers, and you get the exact substring back with offsets and a probability.",
   "type": "module",
   "exports": {
