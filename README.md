@@ -2,7 +2,7 @@
 
 # jeveryword
 
-Field extraction, PII detection and exact quotes, built on [TypeSafe's Jev](https://docs.typesafe.ai).
+**Text extraction with Jev.** Field extraction, PII detection and exact quotes, built on [TypeSafe's Jev](https://docs.typesafe.ai).
 
 [![tests](https://github.com/jkrup/jeveryword/actions/workflows/test.yml/badge.svg)](https://github.com/jkrup/jeveryword/actions/workflows/test.yml) [![npm](https://img.shields.io/npm/v/jeveryword)](https://www.npmjs.com/package/jeveryword) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![node ≥ 20](https://img.shields.io/badge/node-%E2%89%A5%2020-informational) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -224,7 +224,7 @@ own 0 to 1 summary of how peaked those probabilities are.)
 "Token" here means a word, number or punctuation mark of your text, not the sub-word tokens
 a language model counts and bills.
 
-Two details of the format matter. Options are bare ids with `null` descriptions because the
+Options are bare ids with `null` descriptions because the
 numbered list already says what each id is, and that costs far fewer tokens than describing
 every option. Tokens are listed one `id|token` per line because, with inline markers, Jev
 often chose the id after the word it meant.
@@ -317,7 +317,15 @@ Task: <describe what you want extracted, labelled or found, and where in the app
 
 The same field extraction and PII detection are available as a hosted HTTP API. It has no
 accounts or API keys. Each request is paid in USDC through [x402](https://docs.x402.org), at a
-fraction of a cent, which suits agents that hold a wallet.
+fraction of a cent, which suits agents that hold a wallet. The first 25 calls a day from an IP
+address are free, so you can try it with plain `curl`:
+
+```sh
+curl https://jeveryword.vercel.app/v1/extract -H 'Content-Type: application/json' \
+  -d '{"text": "Hi, I am Maya Chen from Fern Labs", "fields": [{"id": "name", "description": "The speaker full name."}]}'
+```
+
+After the free calls the API answers `402 Payment Required`, and an x402 client pays and retries:
 
 ```js
 import { wrapFetchWithPayment } from '@x402/fetch';            // npm install @x402/fetch @x402/evm viem

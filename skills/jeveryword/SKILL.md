@@ -186,7 +186,7 @@ test('reads a booking', async () => {
 make this possible, write app functions so `evaluate` can be passed in, defaulting to the
 real client.
 
-## Before you call it done
+## Before shipping
 
 - Assert `text.slice(start, end) === value` in a test for at least one real input.
 - Catch errors by `error.code`: `invalid_input` (fix the arguments; the message names the field), `invalid_answer`

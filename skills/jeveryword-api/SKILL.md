@@ -6,7 +6,8 @@ description: Call the hosted jeveryword API to pull exact fields out of text or 
 # Hosted jeveryword API (pay per call with x402)
 
 `https://jeveryword.vercel.app/v1` runs the open-source [jeveryword](https://github.com/jkrup/jeveryword)
-library for you. No account, no API key: each request is paid for with a fraction of a cent of
+library for you. It needs no account and no API key. The first 25 calls a day from an IP address
+are free (plain HTTP, no wallet). After that each request is paid for with a fraction of a cent of
 USDC through [x402](https://docs.x402.org). Every value it returns is an exact slice of the text
 you sent, with character offsets and a probability.
 
@@ -62,7 +63,10 @@ the returned text in code. Handle `missing` and `ambiguous`; confirm anything un
 
 ## What the status codes mean
 
+- `200` with an `X-Free-Calls-Remaining` header: a free call; no payment was involved.
 - `200` with a `PAYMENT-RESPONSE` header: done and paid; the header is the on-chain receipt.
+- `402` on a request without payment: the free calls for today are used; pay with an x402 client.
+  Add `?quote` to a request to get the 402 price without running anything or using a free call.
 - `400`: the request was malformed. Nothing was charged; fix it and retry.
 - `402` after your client already paid: the payment was rejected (the body's `error` says why,
   for example `insufficient_balance`). Nothing was charged.
@@ -71,7 +75,7 @@ the returned text in code. Handle `missing` and `ambiguous`; confirm anything un
 ## Rules for handling the wallet
 
 - The private key lives in an environment variable on a server or in the agent's own secret
-  store. Never in browser code, never in a repo, never printed.
+  store. Keep it out of browser code, the repo, and logs.
 - Use a wallet that holds only a small balance for this purpose. Each call costs well under a cent.
 - Check the network in `GET /v1`: `eip155:84532` is Base Sepolia (test USDC, free from a
   faucet); `eip155:8453` is Base mainnet (real USDC).
