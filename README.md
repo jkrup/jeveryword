@@ -34,20 +34,7 @@ turns the numbers Jev picks back into the original substring.
 
 ## Try it
 
-**In your terminal, right now.** No install, no API key (it runs on the shared demo):
-
-```sh
-npx github:jkrup/jeveryword "Hi, I'm Maya Chen from Fern Labs. Reach me at maya@fern.example" name company email phone
-```
-
-```
-name     Maya Chen          [8, 17)    98%
-company  Fern Labs          [23, 32)   98%
-email    maya@fern.example  [46, 63)   98%
-phone    — not in the text
-```
-
-Add `--pii` to find personal data instead. Or use the [live demo](https://jeveryword.vercel.app) in a browser.
+**In your browser.** Paste your own text into the [live demo](https://jeveryword.vercel.app).
 
 **With your coding agent.** One command teaches Claude Code, Cursor, Codex and [70+ other agents](https://github.com/vercel-labs/skills) how to use it; then just ask ("pull the name and email out of each support message"):
 
