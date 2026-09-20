@@ -15,8 +15,8 @@ current network (test or main), prices, and request shapes.
 
 | Endpoint | Body | Price (USD) |
 | --- | --- | --- |
-| `POST /v1/extract` | `{ text, fields: [{ id, description }], trace? }` | 0.002 + 0.0003 per field; doubled over 1,000 characters |
-| `POST /v1/pii` | `{ text, mode?: 'binary' \| 'categorized' }` | 0.001 per 1,000 characters |
+| `POST /v1/extract` | `{ text, fields: [{ id, description }], trace? }` | 0.005 per call + 0.0005 per field (ten fields: one cent) |
+| `POST /v1/pii` | `{ text, mode?: 'binary' \| 'categorized' }` | 0.004 per 1,000 characters; 0.006 with `mode: 'categorized'` |
 
 Limits: text up to 4,000 characters; up to 16 fields; field ids use letters, digits, underscores.
 

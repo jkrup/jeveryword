@@ -335,8 +335,8 @@ const { results } = await response.json();   // same result shape as extractSpan
 
 | Endpoint | Body | Price (USD) |
 | --- | --- | --- |
-| `POST /v1/extract` | `{ text, fields: [{ id, description }] }` | 0.002 + 0.0003 per field; doubled over 1,000 characters |
-| `POST /v1/pii` | `{ text, mode?: 'binary' \| 'categorized' }` | 0.001 per 1,000 characters |
+| `POST /v1/extract` | `{ text, fields: [{ id, description }] }` | 0.005 per call + 0.0005 per field (ten fields: one cent) |
+| `POST /v1/pii` | `{ text, mode?: 'binary' \| 'categorized' }` | 0.004 per 1,000 characters; 0.006 with `mode: 'categorized'` |
 | [`GET /v1`](https://jeveryword.vercel.app/v1) | | free: current network, prices, shapes |
 
 It is on Base Sepolia (test USDC) for now; `GET /v1` always says which network is live. Failed or
