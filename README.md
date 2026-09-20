@@ -8,7 +8,7 @@ Get exact text out of [Jev](https://docs.typesafe.ai), TypeSafe's model that onl
 
 [![tests](https://github.com/jkrup/jeveryword/actions/workflows/test.yml/badge.svg)](https://github.com/jkrup/jeveryword/actions/workflows/test.yml) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![node ≥ 20](https://img.shields.io/badge/node-%E2%89%A5%2020-informational) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[**Live demo**](https://chatform.mazlix-f8e.workers.dev) · [Quickstart](#quickstart) · [Fields](#pull-fields-out-of-a-message) · [Labels](#label-every-word) · [Any question](#ask-anything-else) · [For coding agents](#use-it-from-a-coding-agent)
+[**Live demo**](https://jeveryword.vercel.app) · [Quickstart](#quickstart) · [Fields](#pull-fields-out-of-a-message) · [Labels](#label-every-word) · [Any question](#ask-anything-else) · [For coding agents](#use-it-from-a-coding-agent)
 
 <br>
 
@@ -30,7 +30,7 @@ turns the numbers Jev picks back into the original substring.
 - **Small.** No dependencies, about 500 lines, runs anywhere `fetch` does (Node, Workers, Deno, Bun).
 - **Cheap and quick.** Ten fields from a short message: one call, a few hundred milliseconds, about $0.0004.
 
-> Experimental. Checked on a handful of synthetic samples, not benchmarked. Try your own text in the [live demo](https://chatform.mazlix-f8e.workers.dev).
+> Experimental. Checked on a handful of synthetic samples, not benchmarked. Try your own text in the [live demo](https://jeveryword.vercel.app).
 
 ## Quickstart
 
@@ -329,6 +329,6 @@ npm test                            # stand-in model, no network
 <div align="center">
 <br>
 
-[Live demo](https://chatform.mazlix-f8e.workers.dev) · [TypeSafe docs](https://docs.typesafe.ai) · MIT license
+[Live demo](https://jeveryword.vercel.app) · [TypeSafe docs](https://docs.typesafe.ai) · MIT license
 
 </div>
