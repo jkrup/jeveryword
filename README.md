@@ -11,8 +11,8 @@
 <br>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/how-it-works-dark.svg">
-  <img src="docs/how-it-works-light.svg" alt="How jeveryword works: number every word of a text, let Jev pick a number, turn the number back into the exact text with offsets." width="860">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/hero-dark.svg">
+  <img src="docs/hero-light.svg" alt="Animation: a message snaps into numbered words. Four plain-English asks pop in. One request goes to Jev and returns in 490 milliseconds, and all four answers land together, each with its exact text and offsets. The phone number is reported as not in the text." width="860">
 </picture>
 
 </div>
@@ -92,11 +92,6 @@ The name is the speaker's and not Alex's, the email is the corrected one, and th
 | Anything else about a text | [`tokenize`](#custom-questions) | `tokenize(text)` → `doc.state`, `doc.options()`, `doc.pick()` |
 
 ### Field extraction
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/extract-dark.svg">
-  <img src="docs/extract-light.svg" alt="Animation: four fields are asked for in turn. For each, the numbered words Jev picked light up and the exact text appears with its offsets. The phone number is reported as not in the text." width="860">
-</picture>
 
 A field is an `id` and a plain-English `description`, and the description is the whole prompt
 for that field. Say whose value you mean, which one when several appear ("the new number, not

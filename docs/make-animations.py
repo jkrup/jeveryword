@@ -124,6 +124,69 @@ def pii(t):
     o.append(text(24, 212, 'classifyChunks({ text, labels })  ·  one request  ·  re-filtering needs no new request', 13, t['muted'], MONO))
     return svg(228, 'Animation: a threshold slider moves from low to high. Weak matches such as doctor and Tuesday drop out first; names, the email, the date and asthma stay highlighted until the top.', css, o)
 
+def hero(t):
+    """README top: a message snaps into numbered words, the asks pop in, one timed request goes to Jev, the answers land together."""
+    CH, LOOP = 8.43, 12
+    msg = "Hi, I'm Maya Chen from Fern Labs. Reach me at maya@fern.example"
+    tokens = ['Hi', ',', "I'm", 'Maya', 'Chen', 'from', 'Fern', 'Labs', '.', 'Reach', 'me', 'at', 'maya', '@', 'fern', '.', 'example']
+    asks = [('name', "the speaker's full name", 3, 4, "'Maya Chen'", '[8, 17)', '98%'), ('company', 'the company they work for', 6, 7, "'Fern Labs'", '[23, 32)', '98%'),
+            ('email', 'their email address', 12, 16, "'maya@fern.example'", '[46, 63)', '98%'), ('phone', 'their phone number', None, None, 'not in the text', '', '')]
+    SNAP, ASK, SEND, BACK, LAND, END = 7, 20, 31, 35.1, 37.5, 95          # loop percent of each beat; SEND→BACK is 0.49 s, the real time
+    o, css = [], []
+    def pop(name, start, overshoot=1.08):
+        css.append(f'@keyframes {name}{{0%,{start}%{{opacity:0;transform:scale(.6)}}{start + .01}%{{opacity:1;transform:scale(.6)}}{start + 1}%{{transform:scale({overshoot})}}'
+                   f'{start + 2}%,{END}%{{opacity:1;transform:scale(1)}}{END + .01}%,100%{{opacity:0;transform:scale(1)}}}}'
+                   f'.{name}{{opacity:0;transform-box:fill-box;transform-origin:center;animation:{name} {LOOP}s ease-out infinite}}')
+    def cut(name, on, off=END):
+        css.append(f'@keyframes {name}{{0%,{on}%{{opacity:0}}{on + .01}%,{off}%{{opacity:1}}{off + .01}%,100%{{opacity:0}}}}.{name}{{opacity:0;animation:{name} {LOOP}s step-end infinite}}')
+    # beat 1: the raw message
+    css.append(f'@keyframes raw{{0%,{SNAP}%{{opacity:1}}{SNAP + .01}%,{END + 2}%{{opacity:0}}{END + 2.01}%,100%{{opacity:1}}}}.raw{{animation:raw {LOOP}s step-end infinite}}')
+    o.append(f'<g class="raw">' + text(24, 24, 'A message', 13, t['muted']) + text(24, 66, msg, 17, t['ink'], MONO) + '</g>')
+    # beat 2: every word snaps into a numbered chip, rippling left to right
+    cut('lbl', SNAP); o.append(f'<g class="lbl">' + text(24, 24, 'Every word gets a number', 13, t['muted']) + '</g>')
+    xs, x = [], 24
+    for tok in tokens:
+        w = len(tok) * CH + 14; xs.append((x, w)); x += w + 5
+    for i, (tok, (cx, w)) in enumerate(zip(tokens, xs)):
+        pop(f'c{i}', SNAP + i * .45)
+        o.append(f'<g class="c{i}"><rect x="{cx:.1f}" y="36" width="{w:.1f}" height="46" rx="8" fill="{t["chip"]}" stroke="{t["line"]}"/>'
+                 + text(cx + w / 2, 53, str(i), 11, t['muted'], MONO, 400, 'middle') + text(cx + w / 2, 73, tok, 14, t['ink'], MONO, 400, 'middle') + '</g>')
+    # beat 3: the asks pop in as a stack, all present before anything runs
+    cut('asklbl', ASK - 1); o.append(f'<g class="asklbl">' + text(24, 122, 'Ask for anything, in plain English', 13, t['muted']) + '</g>')
+    for n, (name, desc, lo, hi, value, offsets, prob) in enumerate(asks):
+        stroke, fill = t['tones'][n]; y = 134 + n * 40
+        pop(f'a{n}', ASK + n * .7, 1.04)
+        cut(f'q{n}', ASK + n * .7, LAND + n * .7)                        # the question text, until its answer lands
+        cut(f'r{n}', LAND + n * .7)                                        # the answer text and the highlight
+        o.append(f'<g class="a{n}"><rect x="24" y="{y}" width="500" height="32" rx="16" fill="{fill}" stroke="{stroke}" stroke-width="1.5"/>' + text(42, y + 21, name, 14, stroke, SANS, 650) + '</g>')
+        o.append(f'<g class="q{n}">' + text(118, y + 21, desc, 14, t['ink']) + '</g>')
+        row = text(118, y + 21, value, 14, t['ink'] if lo is not None else t['muted'], MONO if lo is not None else SANS)
+        if lo is not None: row += text(392, y + 21, offsets, 12.5, t['muted'], MONO) + text(506, y + 21, prob, 12.5, t['muted'], SANS, 400, 'end')
+        o.append(f'<g class="r{n}">{row}</g>')
+        if lo is not None:
+            x0, x1 = xs[lo][0], xs[hi][0] + xs[hi][1]
+            words = ''.join(text(xs[i][0] + xs[i][1] / 2, 53, str(i), 11, stroke, MONO, 700, 'middle') + text(xs[i][0] + xs[i][1] / 2, 73, tokens[i], 14, t['ink'], MONO, 400, 'middle') for i in range(lo, hi + 1))
+            o.append(f'<g class="r{n}"><rect x="{x0 - 2:.1f}" y="34" width="{x1 - x0 + 4:.1f}" height="50" rx="10" fill="{fill}" stroke="{stroke}" stroke-width="2"/>{words}'
+                     + text((x0 + x1) / 2, 102, f'{name} → {lo}–{hi}', 12, stroke, SANS, 650, 'middle') + '</g>')
+    # beat 4: one request to Jev, timed on screen for as long as it really took
+    jx, jy = 690, 214
+    pop('jev', ASK + 3.5, 1.06)
+    o.append(f'<g class="jev"><rect x="{jx - 64}" y="{jy - 40}" width="128" height="80" rx="16" fill="{t["panel"]}" stroke="{t["line"]}" stroke-width="1.5"/>'
+             + text(jx, jy - 6, 'Jev', 22, t['ink'], SANS, 700, 'middle') + text(jx, jy + 18, 'multiple choice only', 11, t['muted'], SANS, 400, 'middle')
+             + f'<path d="M532 {jy}H{jx - 70}" stroke="{t["line"]}" stroke-width="2" stroke-dasharray="3 5" fill="none"/></g>')
+    span = jx - 70 - 532
+    css.append(f'@keyframes dot{{0%,{SEND}%{{opacity:0;transform:translateX(0)}}{SEND + .01}%{{opacity:1;transform:translateX(0)}}{SEND + 1.2}%{{transform:translateX({span}px)}}'
+               f'{BACK - 1.2}%{{opacity:1;transform:translateX({span}px)}}{BACK}%{{opacity:1;transform:translateX(0)}}{BACK + .01}%,100%{{opacity:0;transform:translateX(0)}}}}'
+               f'.dot{{opacity:0;animation:dot {LOOP}s cubic-bezier(.5,0,.15,1) infinite}}')
+    o.append(f'<circle class="dot" cx="532" cy="{jy}" r="6" fill="{t["tones"][0][0]}"/>')
+    ticks = [0, 80, 160, 250, 330, 410]
+    for k, ms in enumerate(ticks):                                        # a running stopwatch: each label shows for its share of the 490 ms
+        a = SEND + (BACK - SEND) * ms / 490; b = SEND + (BACK - SEND) * (ticks[k + 1] if k + 1 < len(ticks) else 490) / 490
+        cut(f's{k}', round(a, 2), round(b, 2)); o.append(f'<g class="s{k}">' + text(jx, jy + 66, f'{ms} ms', 15, t['muted'], MONO, 600, 'middle') + '</g>')
+    cut('sdone', BACK); o.append(f'<g class="sdone">' + text(jx, jy + 66, '490 ms', 15, t['tones'][1][0], MONO, 700, 'middle') + text(jx, jy + 86, 'one request, all four answers', 11.5, t['muted'], SANS, 400, 'middle') + '</g>')
+    cut('foot', LAND + 4); o.append(f'<g class="foot">' + text(24, 318, 'Every value is copied from the message: text.slice(start, end) === value', 13, t['muted'], MONO) + '</g>')
+    return svg(334, 'Animation: a message snaps into numbered words. Four plain-English asks pop in. One request goes to Jev and returns in 490 milliseconds, and all four answers land together: the name, the company and the email light up on the numbered words with their offsets, and the phone number is reported as not in the text.', css, o)
+
 def svg(height, label, css, body):
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {height}" width="{W}" height="{height}" role="img" aria-label="{escape(label)}">'
             f'<style>{"".join(css)}@media(prefers-reduced-motion:reduce){{.knob,.fillbar{{animation-timing-function:step-end}}}}</style>{"".join(body)}</svg>\n')
@@ -131,4 +194,5 @@ def svg(height, label, css, body):
 for name, theme in THEMES.items():
     open(f'docs/extract-{name}.svg', 'w').write(extract(theme))
     open(f'docs/pii-{name}.svg', 'w').write(pii(theme))
+    open(f'docs/hero-{name}.svg', 'w').write(hero(theme))
 print('ok')
