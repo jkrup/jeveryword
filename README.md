@@ -93,6 +93,11 @@ The name is the speaker's and not Alex's, the email is the corrected one, and th
 
 ### Field extraction
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/extract-dark.svg">
+  <img src="docs/extract-light.svg" alt="Animation: four fields are asked for in turn. For each, the numbered words Jev picked light up and the exact text appears with its offsets. The phone number is reported as not in the text." width="860">
+</picture>
+
 A field is an `id` and a plain-English `description`, and the description is the whole prompt
 for that field. Say whose value you mean, which one when several appear ("the new number, not
 the current one"), and what to leave out ("without a leading article").
@@ -140,6 +145,11 @@ last token, as `tokenize(text)` numbers them.
 </details>
 
 ### Labelling words
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/pii-dark.svg">
+  <img src="docs/pii-light.svg" alt="Animation: a threshold slider moves from low to high. Weak matches such as doctor and Tuesday drop out first; names, the email, the date and asthma stay highlighted." width="860">
+</picture>
 
 ```js
 import { classifyChunks, mergeChunks } from 'jeveryword';
