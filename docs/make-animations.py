@@ -2,6 +2,8 @@
 #   docs/extract-{light,dark}.svg   fields being picked out of a message
 #   docs/pii-{light,dark}.svg       the PII threshold slider re-filtering one scan
 # Run: python3 docs/make-animations.py     The PII scores are from a real scan of this text.
+# With "reduce motion" on, the fades still play (fades are what that setting allows) and the
+# slider moves in steps instead of gliding.
 from html import escape
 W = 860
 MONO = "ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace"
@@ -84,7 +86,7 @@ def pii(t):
 
 def svg(height, label, css, body):
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {height}" width="{W}" height="{height}" role="img" aria-label="{escape(label)}">'
-            f'<style>{"".join(css)}@media(prefers-reduced-motion:reduce){{*{{animation:none!important}}.f0,.f1,.f2,.f3,.v0{{opacity:1}}.fillbar{{transform:scaleX(0)}}}}</style>{"".join(body)}</svg>\n')
+            f'<style>{"".join(css)}@media(prefers-reduced-motion:reduce){{.knob,.fillbar{{animation-timing-function:steps(10,end)}}}}</style>{"".join(body)}</svg>\n')
 
 for name, theme in THEMES.items():
     open(f'docs/extract-{name}.svg', 'w').write(extract(theme))
