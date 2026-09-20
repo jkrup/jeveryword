@@ -6,7 +6,7 @@
 
 Get exact text out of [Jev](https://docs.typesafe.ai), TypeSafe's model that only answers multiple choice.
 
-[![tests](https://github.com/jkrup/jeveryword/actions/workflows/test.yml/badge.svg)](https://github.com/jkrup/jeveryword/actions/workflows/test.yml) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![node ≥ 20](https://img.shields.io/badge/node-%E2%89%A5%2020-informational) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![tests](https://github.com/jkrup/jeveryword/actions/workflows/test.yml/badge.svg)](https://github.com/jkrup/jeveryword/actions/workflows/test.yml) [![npm](https://img.shields.io/npm/v/jeveryword)](https://www.npmjs.com/package/jeveryword) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![node ≥ 20](https://img.shields.io/badge/node-%E2%89%A5%2020-informational) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 [**Live demo**](https://jeveryword.vercel.app) · [Try it](#try-it) · [Fields](#pull-fields-out-of-a-message) · [Labels](#label-every-word) · [Any question](#ask-anything-else) · [For coding agents](#use-it-from-a-coding-agent) · [Hosted API](#hosted-api-no-key-pay-per-call)
 
@@ -47,7 +47,7 @@ npx skills add jkrup/jeveryword
 **In your code.**
 
 ```sh
-npm install github:jkrup/jeveryword
+npm install jeveryword
 export TYPESAFE_API_KEY=…
 ```
 
@@ -291,7 +291,7 @@ text's tokens, Jev picks numbers, the library maps them back to the verbatim sub
 
 Read https://github.com/jkrup/jeveryword/blob/main/skills/jeveryword/SKILL.md first and follow it.
 Essentials if you cannot open it:
-- npm install github:jkrup/jeveryword   (ESM only; server-side; needs TYPESAFE_API_KEY in the environment, never in browser code)
+- npm install jeveryword   (ESM only; server-side; needs TYPESAFE_API_KEY in the environment, never in browser code)
 - import { createJevClient, extractSpans, classifyChunks, mergeChunks, tokenize } from 'jeveryword'
 - const evaluate = createJevClient({ apiKey: process.env.TYPESAFE_API_KEY })
 - Named fields: const { results } = await extractSpans({ evaluate, text, fields: [{ id, description }] })

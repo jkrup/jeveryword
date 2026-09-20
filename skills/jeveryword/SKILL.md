@@ -25,7 +25,7 @@ it in code afterwards (`new Date(...)`, `parseFloat(...)`).
 ## Setup
 
 ```sh
-npm install github:jkrup/jeveryword
+npm install jeveryword
 ```
 
 It needs `TYPESAFE_API_KEY` in the environment on the **server**. Never ship the key to a
